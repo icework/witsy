@@ -49,6 +49,7 @@ export const preparePromptAnywhere = (queryParams?: anyDict): void => {
 
     // focus
     promptAnywhereWindow.moveTop();
+    promptAnywhereWindow.focus();
     promptAnywhereWindow.focusOnWebView();
 
     // restore opacity (for windows)

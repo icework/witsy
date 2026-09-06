@@ -1,6 +1,6 @@
 
 import { vi, beforeAll, beforeEach, afterEach, expect, test, Mock } from 'vitest'
-import { app, Notification } from 'electron'
+import { app } from 'electron'
 import { Command } from '@/types/index'
 import { store } from '@services/store'
 import defaults from '@root/defaults/settings.json'
@@ -129,7 +129,7 @@ test('Error while grabbing', async () => {
   await promise
 
   expect(Automator.prototype.getSelectedText).toHaveBeenCalled()
-  expect(Notification).toHaveBeenLastCalledWith({ title: 'common.appName', body: 'automation.grabError' })
+  expect(window.openCommandPicker).toHaveBeenCalledWith(expect.objectContaining({ needsInput: true, captureFailed: true }))
 
 })
 
@@ -143,7 +143,7 @@ test('No text to grab', async () => {
   await promise
 
   expect(Automator.prototype.getSelectedText).toHaveBeenCalled()
-  expect(Notification).toHaveBeenLastCalledWith({ title: 'common.appName', body: 'automation.commander.emptyText' })
+  expect(window.openCommandPicker).toHaveBeenCalledWith(expect.objectContaining({ needsInput: true, captureFailed: false }))
 
 })
 
@@ -235,4 +235,19 @@ test('No text', async () => {
   expect(window.openPromptAnywhere).not.toHaveBeenCalled()
   expect(window.releaseFocus).not.toHaveBeenCalledOnce()
 
+})
+
+
+test('Manual command input is processed without selection replacement', async () => {
+  const commander = new Commander()
+  await commander.execCommand(app, {
+    textId: cachedTextId!,
+    text: 'Manually entered context',
+    sourceApp: null,
+    action: 'replace',
+    command: buildCommand('chat_window', 'Explain {input}'),
+  })
+  const params = vi.mocked(window.openPromptAnywhere).mock.calls[0][0]
+  expect(getCachedText(params.promptId)).toBe('Explain Manually entered context')
+  expect(params).toMatchObject({ sourceApp: null, replace: false, action: 'default', execute: true })
 })

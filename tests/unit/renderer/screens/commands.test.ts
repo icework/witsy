@@ -1,10 +1,10 @@
 
-import { vi, beforeAll, beforeEach, expect, test, afterAll } from 'vitest'
+import { vi, beforeAll, beforeEach, expect, test, afterEach } from 'vitest'
 import { useWindowMock } from '@tests/mocks/window'
 import { enableAutoUnmount, mount, VueWrapper } from '@vue/test-utils'
 import CommandPicker from '@screens/CommandPicker.vue'
 
-enableAutoUnmount(afterAll)
+enableAutoUnmount(afterEach)
 
 beforeAll(() => {
   useWindowMock()
@@ -140,3 +140,20 @@ test('Runs command on click', async () => {
 //   })
 
 // })
+
+
+test('Missing selection accepts manual input without triggering letter shortcuts', async () => {
+  const wrapper = mount(CommandPicker, { props: { extra: { needsInput: true } }, attachTo: document.body })
+  await wrapper.vm.$nextTick()
+  const input = wrapper.get('textarea')
+  await wrapper.get('.command').trigger('click')
+  expect(window.api.commands.run).not.toHaveBeenCalled()
+  await input.setValue('Explain this test text')
+  document.dispatchEvent(new Event('blur'))
+  expect(window.api.commands.closePicker).not.toHaveBeenCalled()
+  await input.trigger('keyup', { key: 'a' })
+  await input.trigger('keydown', { key: 'Enter' })
+  expect(window.api.commands.run).not.toHaveBeenCalled()
+  await wrapper.get('.command').trigger('click')
+  expect(window.api.commands.run).toHaveBeenCalledWith(expect.objectContaining({ text: 'Explain this test text', action: 'default' }))
+})

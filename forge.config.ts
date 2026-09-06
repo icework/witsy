@@ -21,7 +21,7 @@ let osxPackagerConfig = {}
 const isDarwin = process.platform == 'darwin';
 const dmgOptions: MakerDMGConfig = {
   //appPath: 'actually_not_used',
-  icon: './assets/icon.icns',
+  icon: './assets/summon.icns',
   background: './assets/dmg_background.png',
   additionalDMGOptions: {
     window: {
@@ -63,9 +63,9 @@ const config: ForgeConfig = {
     //   return false;
     // },
 
-    icon: 'assets/icon',
-    executableName: process.platform == 'linux' ? 'witsy' : 'Witsy',
-    appBundleId: 'com.nabocorp.witsy',
+    icon: process.platform === 'darwin' ? 'assets/summon' : 'assets/icon',
+    executableName: process.platform == 'linux' ? 'summon' : 'Summon',
+    appBundleId: 'local.summon.desktop',
     extendInfo: './build/Info.plist',
     buildVersion: `${process.env.BUILD_NUMBER}`,
     extraResource: [

@@ -5,7 +5,7 @@
       <div class="modal-popup form form-large" :class="{ 'form-vertical': form === 'vertical' }" :style="popupStyle">
         <div class="modal-icon" v-if="icon && type === 'alert'">
           <div class="modal-icon-content">
-            <img src="/assets/icon.png" />
+            <img src="@assets/summon.png" />
           </div>
         </div>
         <h2 class="dialog-title modal-title">

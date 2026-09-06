@@ -17,6 +17,7 @@ const height = 320;
 let commanderStartTime: number|undefined
 let sourceApp: Application|undefined;
 let cursorAtOpen: { x: number, y: number }|undefined;
+let needsInput = false;
 
 export const prepareCommandPicker = (queryParams?: anyDict): void => {
 
@@ -51,6 +52,7 @@ export const prepareCommandPicker = (queryParams?: anyDict): void => {
 
     // focus
     commandPicker.moveTop();
+    commandPicker.focus();
     commandPicker.focusOnWebView();
 
     // try to activate (make foremost)
@@ -75,6 +77,7 @@ export const openCommandPicker = (params: anyDict): void => {
 
   // save
   sourceApp = params.sourceApp;
+  needsInput = !!params.needsInput;
   commanderStartTime = params.startTime;
 
   // if we don't have a window, create one
@@ -89,9 +92,10 @@ export const openCommandPicker = (params: anyDict): void => {
 
   // and at right location
   cursorAtOpen = screen.getCursorScreenPoint();
+  const { workArea } = screen.getDisplayNearestPoint(cursorAtOpen);
   commandPicker.setBounds({
-    x: cursorAtOpen.x - width/2,
-    y: cursorAtOpen.y - (params.sourceApp ? 64 : 24),
+    x: Math.max(workArea.x, Math.min(cursorAtOpen.x - width/2, workArea.x + workArea.width - width)),
+    y: Math.max(workArea.y, Math.min(cursorAtOpen.y - (params.sourceApp ? 64 : 24), workArea.y + workArea.height - height)),
     width: width,
     height: height,
   });
@@ -197,7 +201,7 @@ const activateCommandPicker = async () => {
   } finally {
 
     // now add blur handler
-    if (isThere()) {
+    if (isThere() && !needsInput) {
       //console.log('Adding blur handler to command picker');
       commandPicker.removeAllListeners('blur');
       commandPicker.on('blur', () => {

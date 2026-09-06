@@ -4,6 +4,7 @@ import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer';
 import log from 'electron-log/main';
 import Store from 'electron-store';
 import process from 'node:process';
+import path from 'node:path';
 
 // Prevent EPIPE errors from crashing the app
 process.on('uncaughtException', (error) => {
@@ -59,6 +60,8 @@ let trayIconManager: TrayIconManager;
 let keyMonitor: KeyMonitor;
 let dictation: Dictation;
 
+app.setName('Summon');
+
 // first-thing: single instance
 // on darwin this is done through Info.plist (LSMultipleInstancesProhibited)
 if (process.platform !== 'darwin' && !process.env.TEST) {
@@ -71,7 +74,7 @@ if (process.platform !== 'darwin' && !process.env.TEST) {
 
 // changes path
 if (process.env.WITSY_HOME) {
-  const originalGetPath = app.getPath;
+  const originalGetPath = app.getPath.bind(app);
   app.getPath = (name: string) => {
     if (name === 'userData') {
       return process.env.WITSY_HOME;
@@ -164,12 +167,16 @@ if (process.platform === 'darwin') {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
 
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    app.dock?.setIcon(path.join(app.getAppPath(), 'assets/summon.png'));
+  }
+
   // check if run from app folder
   if (process.platform === 'darwin' && !process.env.DEBUG && !process.env.TEST && !app.isInApplicationsFolder()) {
     dialog.showMessageBox({
       type: 'error',
-      message: 'You need to run Witsy from the Applications folder. Move the app icon there and try again.',
-      detail: 'If you already moved the app icon there, make sure you run Witsy from the Applications folder.',
+      message: 'You need to run Summon from the Applications folder. Move the app icon there and try again.',
+      detail: 'If you already moved the app icon there, make sure you run Summon from the Applications folder.',
       buttons: ['OK'],
     });
     quitApp();

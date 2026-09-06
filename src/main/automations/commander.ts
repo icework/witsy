@@ -1,10 +1,10 @@
 
-import { App, Notification } from 'electron'
+import { App } from 'electron'
 import { RunCommandParams } from 'types/automation'
 import { Configuration } from 'types/config'
 import LlmFactory, { ILlmManager } from '@renderer/services/llms/llm'
 import { loadSettings } from '../config'
-import { useI18n, useI18nLlm } from '../i18n'
+import { useI18nLlm } from '../i18n'
 import { getCachedText, putCachedText } from '../utils'
 import * as window from '../window'
 import Automation from './automation'
@@ -23,37 +23,13 @@ export default class Commander {
     // start time
     const startTime = Date.now();
 
-    // localization
-    const t = useI18n(app);
-
-    // get selected text
     const automator = new Automator();
     const text = await Automation.grabSelectedText(automator, timeout);
 
-    // error
-    if (text == null) {
-      try {
-        new Notification({
-          title: t('common.appName'),
-          body: t('automation.grabError')
-        }).show()
-      } catch (error) {
-        console.error('Error showing notification', error);
-      }
-      return;
-    }
-
-    // notify if no text
-    if (text.trim() === '') {
-      try {
-        new Notification({
-          title: t('common.appName'),
-          body: t('automation.commander.emptyText')
-        }).show()
-        console.log('No text selected');
-      } catch (error) {
-        console.error('Error showing notification', error);
-      }
+    // A notification alone can be invisible when notifications are disabled.
+    // Keep the command workflow available with explicit manual input instead.
+    if (!text?.trim()) {
+      window.openCommandPicker({ needsInput: true, captureFailed: text == null, startTime });
       return;
     }
 
@@ -70,12 +46,12 @@ export default class Commander {
     const { textId, sourceApp, command } = params;
     
     // get text
-    const text = getCachedText(textId);
+    const text = params.text ?? getCachedText(textId);
 
     try {
 
       // check
-      if (!text) {
+      if (!text?.trim()) {
         console.error('No text to process');
         return false;
       }
@@ -104,12 +80,12 @@ export default class Commander {
       // build the params
       const promptParams = {
         promptId: putCachedText(prompt),
-        sourceApp: sourceApp,
+        sourceApp: params.text !== undefined ? null : sourceApp,
         engine: engine || command.engine,
         model: model || command.model,
         execute: command.id != askMeAnythingId,
-        action: params.action || 'default',
-        replace: true,
+        action: params.text !== undefined ? 'default' : (params.action || 'default'),
+        replace: params.text === undefined,
       };
       
       // and open the window

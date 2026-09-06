@@ -1,6 +1,6 @@
 {
   "name": "witsy",
-  "productName": "Witsy",
+  "productName": "Summon",
   "version": "3.6.0",
   "description": "Witsy: desktop AI assistant",
   "repository": {
@@ -207,14 +207,30 @@
     "zod": "^3.25.76"
   },
   "build": {
-    "appId": "com.nabocorp.witsy",
+    "appId": "local.summon.desktop",
     "mac": {
-      "icon": "assets/icon.icns",
+      "icon": "assets/summon.icns",
       "category": "public.app-category.productivity"
     },
     "win": {
       "icon": "assets/icon.ico",
       "target": "portable"
     }
+  },
+  "allowScripts": {
+    "electron@38.2.0": true,
+    "github:nbonamy/witsy-autolib#7712bbd954a3c5b95e08b8a5d8adc0d35ffdab90": true,
+    "esbuild@0.21.5": true,
+    "fs-xattr@0.3.1": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true,
+    "macos-alias@0.2.12": true,
+    "onnxruntime-node@1.21.0": true,
+    "protobufjs@7.5.4": true,
+    "sharp@0.34.4": true,
+    "unrs-resolver@1.11.1": true,
+    "vue-demi@0.14.10": true,
+    "electron-winstaller@5.4.0": true,
+    "core-js@3.45.1": true
   }
 }

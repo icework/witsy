@@ -4,6 +4,10 @@
       <div class="app" v-if="sourceApp">
         <img class="icon" :src="iconData" /> {{ t('common.workingWith') }} {{ sourceApp.name }}
       </div>
+      <template v-if="needsInput">
+        <label for="command-input">{{ t(showParams.captureFailed ? 'commands.picker.captureFailed' : 'commands.picker.noSelection') }}</label>
+        <textarea id="command-input" ref="input" v-model="inputText" rows="3" :placeholder="t('commands.picker.inputPlaceholder')" />
+      </template>
       <div class="list" ref="list">
         <div class="command" v-for="command in commands" :key="command.id" :class="{ selected: selected?.id == command.id }" @mousemove="onMouseMove(command)" @click="onRunCommand($event, command)">
           <div class="icon">{{ command.icon }}</div>
@@ -53,6 +57,9 @@ const selected= ref<Command | null>(null)
 const sourceApp= ref<ExternalApp | null>(null)
 const action = ref<CommandAction>('default')
 const showHelp = ref(false)
+const needsInput = ref(false)
+const inputText = ref('')
+const input = ref<HTMLTextAreaElement | null>(null)
 
 const iconData = computed(() => {
   return `data:${sourceApp.value.icon?.mimeType};base64,${sourceApp.value.icon?.contents}`
@@ -78,7 +85,9 @@ onMounted(() => {
   // shortcuts work better at document level
   onDomEvent(document, 'keydown', onKeyDown)
   onDomEvent(document, 'keyup', onKeyUp)
-  onDomEvent(document, 'blur', onClose)
+  onDomEvent(document, 'blur', () => {
+    if (!needsInput.value) onClose()
+  })
 
   // events
   onIpcEvent('show', onShow)
@@ -102,7 +111,11 @@ const onFileModified = (file: string) => {
 
 const onShow = (params?: anyDict) => {
   //console.log('CommandPicker.onShow', JSON.stringify(params))
-  showParams = params
+  showParams = params || {}
+  needsInput.value = !!showParams.needsInput
+  inputText.value = ''
+  showHelp.value = false
+  if (needsInput.value) nextTick(() => input.value?.focus())
   sourceApp.value = showParams?.sourceApp ? window.api.file.getAppInfo(showParams.sourceApp.path) : null
   commands.value = store.commands.filter(command => command.state == 'enabled')
   selected.value = commands.value[0]
@@ -120,6 +133,7 @@ const actionFromEvent = (event: MouseEvent | KeyboardEvent): CommandAction => {
 }
 
 const onKeyDown = (event: KeyboardEvent) => {
+  if (needsInput.value && event.target === input.value) return
   action.value = actionFromEvent(event)
   if (event.key == 'Enter') {
     if (selected.value) {
@@ -151,6 +165,7 @@ const ensureVisible = () => {
 }
 
 const onKeyUp = (event: KeyboardEvent) => {
+  if (needsInput.value && event.target === input.value && event.key !== 'Escape') return
   action.value = actionFromEvent(event)
   if (event.key == 'Escape') {
     onClose()
@@ -176,11 +191,16 @@ const onClose = () => {
 }
 
 const onRunCommand = (event: MouseEvent | KeyboardEvent, command: Command) => {
+  if (needsInput.value && !inputText.value.trim()) {
+    input.value?.focus()
+    return
+  }
   window.api.commands.run({
+    ...(needsInput.value ? { text: inputText.value } : {}),
     textId: showParams.textId,
     sourceApp: showParams.sourceApp,
     command: JSON.parse(JSON.stringify(command)),
-    action: actionFromEvent(event)
+    action: needsInput.value ? 'default' : actionFromEvent(event)
   })
 }
 
@@ -246,6 +266,13 @@ const onUsage = () => {
 
 .list {
   overflow: auto;
+  min-height: 0;
+}
+
+.commands textarea {
+  flex-shrink: 0;
+  resize: none;
+  margin-bottom: var(--space-4);
 }
 
 .windows .app {

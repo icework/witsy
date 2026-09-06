@@ -36,7 +36,6 @@ import { PropType } from 'vue'
 import { t } from '@services/i18n'
 import WizardStep from '@components/WizardStep.vue'
 import Agent from '@models/agent'
-import { isValidUrl } from '@fal-ai/client/src/utils'
 
 const props = defineProps({
   agent: {

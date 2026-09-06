@@ -79,7 +79,7 @@ vi.mock('electron', async () => {
     getCursorScreenPoint: vi.fn(() => ({ x: 0, y: 0 })),
     getDisplayNearestPoint: vi.fn(() => ({
       bounds: { x: 0, y: 0, width: 1024, height: 768 },
-      workArea: { x: 0, y: 25 },
+      workArea: { x: 0, y: 25, width: 1024, height: 743 },
       workAreaSize: { width: 0, height: 0 }
     })),
   }
@@ -232,6 +232,13 @@ test('Create command picker window', async () => {
   expect(BrowserWindow.prototype.loadURL).toHaveBeenLastCalledWith('http://localhost:3000/?textId=id#/commands')
   const callParams = (BrowserWindow as unknown as Mock).mock.calls[0][0]
   expectCreateWebPreferences(callParams)
+})
+
+test('Command picker stays visible when invoked from the menu bar', () => {
+  window.openCommandPicker({ needsInput: true })
+  expect(BrowserWindow.prototype.setBounds).toHaveBeenLastCalledWith({
+    x: 0, y: 25, width: 300, height: 320,
+  })
 })
 
 test('Close command picker window', async () => {

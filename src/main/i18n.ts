@@ -89,6 +89,11 @@ export const getLocaleMessages = (app: App): Record<string, any> => {
     }
   }
 
+  // The fork uses one product name across built-in and custom locales.
+  for (const locale of Object.values(messages)) {
+    locale.common = { ...locale.common, appName: 'Summon' }
+  }
+
   // done
   return messages
 

@@ -59,6 +59,7 @@ export interface Automator {
 export type CommandAction = 'default' | 'copy' | 'insert' | 'replace'
 
 export type RunCommandParams = {
+  text?: string
   textId: string
   sourceApp: Application | null
   command: Command
