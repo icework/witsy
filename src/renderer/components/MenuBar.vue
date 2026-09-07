@@ -14,6 +14,11 @@
         <span>{{ t('common.chat') }}</span>
       </MenuBarItem>
 
+      <MenuBarItem action="context-workflows" :active="mode === 'context-workflows'" @click="emit('change', 'context-workflows')">
+        <WorkflowIcon />
+        <span>{{ t('contextWorkflow.title') }}</span>
+      </MenuBarItem>
+
       <MenuBarItem action="studio" :active="mode === 'studio'" @click="emit('change', 'studio')" v-if="store.isFeatureEnabled('studio') && !isFeatureHidden('studio')">
         <PaletteIcon />
         <span>{{ t('designStudio.title') }}</span>
@@ -90,7 +95,7 @@
 
 import ContextMenu from '@imengyu/vue3-context-menu'
 import '@imengyu/vue3-context-menu/lib/vue3-context-menu.css'
-import { FileTextIcon, HeadsetIcon, LightbulbIcon, MenuIcon, MicIcon, MouseIcon, PaletteIcon, PlugIcon, SettingsIcon, icons } from 'lucide-vue-next'
+import { FileTextIcon, HeadsetIcon, LightbulbIcon, MenuIcon, MicIcon, MouseIcon, PaletteIcon, PlugIcon, SettingsIcon, WorkflowIcon, icons } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import IconAgent from '@assets/agent.svg?component'
 import IconChat from '@assets/message-circle-3.svg?component'

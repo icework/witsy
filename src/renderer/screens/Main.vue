@@ -10,9 +10,10 @@
 
     <main>
       
-      <MenuBar :mode="mode" @change="onMode" @new-chat="onNewChat" @run-onboarding="onRunOnboarding" @import-markdown="onImportMarkdown" />
+      <MenuBar v-if="!quickChat" :mode="mode" @change="onMode" @new-chat="onNewChat" @run-onboarding="onRunOnboarding" @import-markdown="onImportMarkdown" />
       
       <Chat ref="chat" :mode="chatMode" :active="mode === 'chat'" :style="{ display: mode === 'chat' ? undefined : 'none' }" :extra="viewParams" />
+      <ContextWorkflows v-if="mode === 'context-workflows'" />
       <DesignStudio :style="{ display: mode === 'studio' ? undefined : 'none' }" />
       <RealtimeChat v-if="mode === 'voice-mode'" ref="realtime" />
       <AudioBooth v-if="mode === 'booth'" ref="audioBooth" />
@@ -45,7 +46,7 @@
     
     </main>
     
-    <footer>
+    <footer v-if="!quickChat">
       <label>{{ t('common.appName') }} v{{ version }}</label>
       <div class="actions">
         <ActivityIcon @click="onMode('debug')"/>
@@ -70,6 +71,7 @@ import Dialog from '@renderer/utils/dialog'
 import AgentForge from '@screens/AgentForge.vue'
 import AudioBooth from '@screens/AudioBooth.vue'
 import Chat from '@screens/Chat.vue'
+import ContextWorkflows from '@screens/ContextWorkflows.vue'
 import DesignStudio from '@screens/DesignStudio.vue'
 import DocRepos from '@screens/DocRepos.vue'
 import McpServers from '@screens/McpServers.vue'
@@ -93,6 +95,8 @@ const audioBooth = ref<typeof AudioBooth>(null)
 const realtime = ref<typeof RealtimeChat>(null)
 const settings = ref<typeof Settings>(null)
 const showOnboarding = ref(false)
+const quickChat = ref(false)
+onIpcEvent('screenshot-state', (state) => { quickChat.value = state.compact; if (state.compact && mode.value !== 'chat') onMode('chat') })
 const updateAvailable = ref(false)
 
 // init stuff

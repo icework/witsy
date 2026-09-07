@@ -1,3 +1,5 @@
+import { ChatAgent, ContextWorkflow, ScreenshotSettings } from './types/chat_agent'
+import { RuntimeBinding, RuntimeConnection } from './types/runtime'
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
@@ -26,6 +28,30 @@ let listenerId = 0
 
 contextBridge.exposeInMainWorld(
   'api', {
+    chatAgents: {
+      list: () => ipcRenderer.invoke(IPC.CHAT_AGENT.LIST),
+      workflows: () => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.LIST),
+      saveWorkflow: (workflow: ContextWorkflow) => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.SAVE, workflow),
+      removeWorkflow: (id: string) => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.REMOVE, id),
+      runWorkflow: (id?: string) => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.RUN, id),
+      save: (agent: ChatAgent) => ipcRenderer.invoke(IPC.CHAT_AGENT.SAVE, agent),
+      remove: (id: string) => ipcRenderer.invoke(IPC.CHAT_AGENT.REMOVE, id),
+      screenshotSettings: (settings?: ScreenshotSettings) => ipcRenderer.invoke(IPC.CHAT_AGENT.SETTINGS, settings),
+      capture: (fresh?: boolean) => ipcRenderer.invoke(IPC.CHAT_AGENT.CAPTURE, fresh),
+      screenshotSource: () => ipcRenderer.invoke(IPC.CHAT_AGENT.SOURCE),
+      screenshotFinish: (region?: { x: number; y: number; width: number; height: number }) => ipcRenderer.invoke(IPC.CHAT_AGENT.FINISH, region),
+      screenshotState: () => ipcRenderer.invoke(IPC.CHAT_AGENT.STATE),
+      screenshotUpdate: (update: { manualText?: boolean; dismiss?: boolean; chatId?: string; busy?: boolean; expand?: boolean; hide?: boolean }) => ipcRenderer.invoke(IPC.CHAT_AGENT.UPDATE, update),
+    },
+    runtime: {
+      list: () => ipcRenderer.invoke(IPC.RUNTIME.LIST),
+      save: (connection: RuntimeConnection, secret?: string, localProfile?: string) => ipcRenderer.invoke(IPC.RUNTIME.SAVE, connection, secret, localProfile),
+      catalog: (binding: RuntimeBinding) => ipcRenderer.invoke(IPC.RUNTIME.CATALOG, binding),
+      start: (chatId: string, binding: RuntimeBinding, text: string, images?: string[]) => ipcRenderer.invoke(IPC.RUNTIME.START, chatId, binding, text, images),
+      get: (chatId: string) => ipcRenderer.invoke(IPC.RUNTIME.GET, chatId),
+      cancel: (chatId: string) => ipcRenderer.invoke(IPC.RUNTIME.CANCEL, chatId),
+      approve: (chatId: string, requestId: string, choice: string) => ipcRenderer.invoke(IPC.RUNTIME.APPROVE, chatId, requestId, choice),
+    },
     licensed: true,
     platform: process.platform,
     userDataPath: ipcRenderer.sendSync(IPC.APP.GET_APP_PATH),

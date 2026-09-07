@@ -1,6 +1,6 @@
 # Witsy macOS Agent Launcher 执行规格
 
-日期：2026-09-06。产品名：Summon（召见）。状态：需求已确认，待实施；本文不表示任何新功能已经实现或通过测试。
+日期：2026-09-06。产品名：Summon（召见）。状态：实施中；已交付范围及验证结果以阶段记录为准，未勾选项目仍未完成。
 
 ## 1. 产品目标与优先级
 
@@ -25,7 +25,7 @@
 - 开发者负责实际功能验证，不把全部验证转交用户。系统权限或服务认证确需用户操作时，只请求该必要操作并说明阻塞点。
 - 使用隔离 WITSY_HOME、测试聊天目录和可控测试文件；不覆盖现有配置、聊天和项目文件。先核实隔离开关的实际作用，再启动测试实例。
 - 修改代码时遵守原有 IPC、事件、Vue、CSS 变量、英文新增翻译和测试约定。
-- 本文是实施规格；本轮交付文档，代码实现状态从零开始。
+- 本文是实施规格；实际实施进度见第 9 节及其链接的验证记录。
 
 ## 3. 已确认的产品边界
 
@@ -36,7 +36,7 @@
 | 9–10 | 外部 Runtime 管理自己的认证；普通 Provider 保留 Witsy 认证；OpenCode Go 首版经 OpenCode 使用 |
 | 11–13 | Agent 默认绑定 Runtime；外部配置先继承和展示；Experts 可转换；工作流 Agent 独立保留 |
 | 14–16 | Native 设置系统提示；外部默认追加指令；会话保存配置快照；旧会话主动应用 Agent 更新 |
-| 17–18 | Agent 可设工作目录，新会话可覆盖且始终可见；展示 Runtime 原生权限选项，不默认自动批准 |
+| 17–18 | Hermes 使用自身/Profile 工作目录，Summon 不指定或覆盖；OpenCode 的 Agent 可设工作目录，新会话可覆盖且始终可见；展示 Runtime 原生权限选项，不默认自动批准 |
 | 19–21 | 默认 Agent 可配置；模型按能力切换；Runtime/Profile/OpenCode Agent/目录变化创建分支；默认带可读历史，超限提示摘要 |
 | 22–26 | Quick Chat 恢复上次会话，Action 可指定新建；与 Main Chat 共享；隐藏继续执行；后台完成通知可关闭；首版不导入外部会话 |
 | 27–28 | 快捷键绑定可复用 Action；首版不做任意多步工作流编辑器 |
@@ -70,15 +70,15 @@
 | 对象 | 必需字段与含义 |
 | --- | --- |
 | RuntimeConnection | id、kind、name、endpoint、credentialRef、enabled、服务版本与能力缓存；凭证不进入聊天文件 |
-| ChatAgent | id、name、runtimeConnectionId、externalAgentRef/profile、providerId/modelId、instructions、instructionsMode、workingDirectory、contextDefaults、原生工具/权限配置或外部继承说明 |
+| ChatAgent | id、name、runtimeConnectionId、externalAgentRef/profile、providerId/modelId、instructions、instructionsMode、可选 workingDirectory（Hermes 不设置）、contextDefaults、原生工具/权限配置或外部继承说明 |
 | Action | id、name、enabled、shortcut、agentId、overrides、contextPolicy、promptTemplate、sendMode、conversationPolicy、resultPolicy、incognito、notifyOnComplete |
 | Conversation | id、parentId、title、timestamps、agentSnapshot、effectiveConfig、runtimeBinding、messages、attachmentRefs；普通会话才持久化 |
-| RuntimeBinding | connectionId、profile/externalAgentRef、workingDirectory、sessionId、最近可恢复事件游标；不把本机文件路径当远端可访问路径 |
+| RuntimeBinding | connectionId、profile/externalAgentRef、可选 workingDirectory（Hermes 仅记录服务实际返回的目录）、sessionId、最近可恢复事件游标；不把本机文件路径当远端可访问路径 |
 | ContextItem | id、kind(selection/clipboard/screenshot/file)、mimeType、来源信息、采集时间、内存数据或受管附件引用 |
 | Run | id、conversationId、runtimeRunId、submissionId、状态、事件游标、待处理权限；明确 terminal 状态与 stopping |
 | RuntimeCapabilities | 模型枚举、图片/文件、续聊、取消、权限响应、指令覆盖、事件重放等逐项能力，不支持项在 UI 禁用并解释 |
 
-配置解析顺序：本次显式选择 > 已有会话配置 > Action 覆盖 > Agent 默认 > Runtime 默认。Action 的覆盖用于创建会话；恢复旧会话时不会悄悄覆盖旧配置。若 Action 明确要求不同 Runtime/Profile/目录，则新建分支。
+配置解析顺序：本次显式选择 > 已有会话配置 > Action 覆盖 > Agent 默认 > Runtime 默认。Action 的覆盖用于创建会话；恢复旧会话时不会悄悄覆盖旧配置。若 Action 明确要求不同 Runtime/Profile/可覆盖的目录，则新建分支。Hermes 不接受 Agent、Action 或会话层的目录覆盖；使用 Hermes 自身配置，UI 显示“由 Hermes 管理”，只有服务可靠返回实际路径时才附加展示路径，不为显示目录自动执行工具。
 
 普通会话保存有效配置快照和变更记录；模型展示以服务实际返回为准，不仅展示用户请求值。追加指令与 Action 任务正文分别传递，不能把选区内容拼成系统指令。
 
@@ -116,7 +116,7 @@
 
 ### 5.2 根据上下文执行任务
 
-采集选区/截图/文件 → 展示任务和工作目录 → 提交 Hermes/OpenCode → 展示工具执行与原生审批 → 查看结果或继续会话。没有选区时进入输入框，不自动读取剪贴板。
+采集选区/截图/文件 → 展示任务和工作目录（Hermes 显示“由 Hermes 管理”）→ 提交 Hermes/OpenCode → 展示工具执行与原生审批 → 查看结果或继续会话。没有选区时进入输入框，不自动读取剪贴板。
 
 ### 5.3 Quick Chat 与并发
 
@@ -200,7 +200,13 @@ Conversations/
 
 每阶段提交小增量并记录检查结果；阶段完成以验收证据为准，不以界面已有按钮为准。
 
+最新增量：[统一 Chat Agent 与截图提问](macos-agent-launcher-screenshot-agents.md)。用户授权直接实现 Native/Hermes/OpenCode 预设及截图时选择 Agent；本增量已进入开发验证与待用户验收阶段，下面完整阶段的未完成项仍保留。
+
+后续 UI 与对象调整：[Custom Agents 与 Context Workflows](macos-agent-launcher-context-workflows.md)。Agent 页采用左侧列表、右侧编辑；上下文输入、处理 Agent 和快捷键归入独立 Workflow 设置页。
+
 ### P0：协议和 macOS 验证底座
+
+实施记录：[P0 验证记录](macos-agent-launcher-p0.md)、[Chat Runtime 增量及验收](macos-agent-launcher-runtime-chat.md)。用户随后指定先实现“在 Chat 界面与 Hermes 特定 Profile 或 OpenCode 特定 Agent 对话”，因此已实施 P1 的聊天接入子集；P0/P1 整体出口仍未完成。当前先交付该增量供用户验收，每个大阶段仍须用户测试验收后再进入下一阶段。
 
 - [ ] 确认开发数据隔离、当前启动路径、现有聊天/截图/快捷键/Temporary 行为。
 - [ ] 记录实际 Hermes/OpenCode 版本、健康、认证与能力；不打印凭证。
@@ -217,7 +223,7 @@ Conversations/
 - [ ] 包装 Native，增加 Hermes/OpenCode adapter 和能力过滤。
 - [ ] 实现运行状态机、事件隔离/去重、排队、取消与权限回复。
 - [ ] 实现普通会话文件存储与 Incognito 内存门禁；此阶段仅用隔离数据验证迁移。
-- [ ] Main Chat 可选择 Agent/模型，展示实际生效配置和工作目录。
+- [ ] Main Chat 可选择 Agent/模型，展示实际生效配置和工作目录；Hermes 目录由服务管理，不提供编辑。
 
 出口：Native/Hermes/OpenCode 均可在 Main Chat 完成多轮任务；普通会话可独立读取；临时会话无 Witsy 持久内容。
 

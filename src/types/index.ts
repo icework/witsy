@@ -1,3 +1,5 @@
+import { ChatAgent, ChatAgentAPI } from './chat_agent'
+import { RuntimeAPI, RuntimeBinding } from './runtime'
 
 import { Size } from 'electron'
 import { Attachment as IAttachmentBase, Message as IMessageBase, LlmChunk, LlmChunkTool, LlmModelOpts, LlmToolCall, LlmUsage, PluginTool } from 'multi-llm-ts'
@@ -16,7 +18,7 @@ import { YoutubeVideoInfo } from '../main/youtube'
 export type strDict = Record<string, string>
 export type anyDict = Record<string, any>
 
-export type MainWindowMode = 'none' | 'chat' | 'studio' | 'scratchpad' | 'booth' | 'agents' | 'voice-mode' | 'docrepos' | 'mcp' | 'settings' | `webapp-${string}`
+export type MainWindowMode = 'none' | 'chat' | 'context-workflows' | 'studio' | 'scratchpad' | 'booth' | 'agents' | 'voice-mode' | 'docrepos' | 'mcp' | 'settings' | `webapp-${string}`
 
 export type ScratchpadHeader = {
   uuid: string
@@ -105,6 +107,8 @@ export type CustomInstruction = {
 }
 
 export interface Chat {
+  runtime?: RuntimeBinding
+  chatAgent?: ChatAgent
   uuid: string
   title?: string
   createdAt: number
@@ -346,6 +350,8 @@ export type LocalSearchResult = {
 declare global {
   interface Window {
     api: {
+      runtime: RuntimeAPI
+      chatAgents: ChatAgentAPI
       licensed: boolean
       platform: string
       userDataPath: string

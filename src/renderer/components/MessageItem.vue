@@ -77,7 +77,7 @@
       </div>
 
     </div>
-    <MessageItemActions :message="message" :read-aloud="onReadAloud" :audio-state="audioState" @show-tools="onShowTools" @edit-message="startEditing" :class="{ visible: hovered }" v-if="!isEditing"/>
+    <MessageItemActions :runtime-owned="!!chat?.runtime" :message="message" :read-aloud="onReadAloud" :audio-state="audioState" @show-tools="onShowTools" @edit-message="startEditing" :class="{ visible: hovered }" v-if="!isEditing"/>
     <audio ref="audio" />
   </div>
 </template>

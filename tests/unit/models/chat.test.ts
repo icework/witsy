@@ -16,6 +16,15 @@ test('Build from title', () => {
   expect(chat.messages).toStrictEqual([])
 })
 
+test('saved Chat Agent settings survive history reload as an independent snapshot', () => {
+  const chat = new Chat()
+  chat.chatAgent = { id: 'n', name: 'Vision', kind: 'native', native: { engine: 'mock', model: 'vision', instructions: 'Be brief', tools: ['search'] } }
+  const restored = Chat.fromJson(JSON.parse(JSON.stringify(chat)))
+  expect(restored.chatAgent).toEqual(chat.chatAgent)
+  chat.chatAgent.native.tools = []
+  expect(restored.chatAgent.native.tools).toEqual(['search'])
+})
+
 test('Build from JSON', () => {
   const chat = Chat.fromJson({
     uuid: 'uuid',
@@ -163,4 +172,10 @@ test('Migrate legacy docrepo to docrepos on patchFromJson', () => {
     messages: []
   })
   expect(chat.docrepos).toStrictEqual(['legacy-docrepo'])
+})
+test('preserves external runtime identity and session when restoring history', () => {
+  const chat = new Chat()
+  chat.runtime = { connectionId: 'connection', kind: 'hermes', profile: 'research', sessionId: 'remote-session' }
+  const restored = Chat.fromJson(JSON.parse(JSON.stringify(chat)))
+  expect(restored.runtime).toEqual(chat.runtime)
 })

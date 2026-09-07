@@ -39,6 +39,23 @@ const useWindowMock = (opts?: WindowMockOpts) => {
 
   let runAtLogin = false
   window.api = {
+    chatAgents: {
+      list: vi.fn().mockResolvedValue([]), save: vi.fn(), remove: vi.fn(),
+      workflows: vi.fn().mockResolvedValue([]), saveWorkflow: vi.fn(), removeWorkflow: vi.fn(), runWorkflow: vi.fn(),
+      screenshotSettings: vi.fn().mockResolvedValue({ accelerator: '' }), capture: vi.fn(),
+      screenshotSource: vi.fn().mockResolvedValue(''), screenshotFinish: vi.fn(),
+      screenshotState: vi.fn().mockResolvedValue({ capturing: false, compact: false, busy: false }),
+      screenshotUpdate: vi.fn().mockResolvedValue(undefined),
+    },
+    runtime: {
+      list: vi.fn().mockResolvedValue([]),
+      save: vi.fn(),
+      catalog: vi.fn().mockResolvedValue({ profiles: [], agents: [], models: [] }),
+      start: vi.fn(),
+      get: vi.fn().mockResolvedValue(null),
+      cancel: vi.fn(),
+      approve: vi.fn(),
+    },
     licensed: false,
     platform: 'darwin',
     isMasBuild: false,

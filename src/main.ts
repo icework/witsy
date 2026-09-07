@@ -1,3 +1,4 @@
+import { registerContextWorkflowShortcuts } from './main/context_workflows'
 
 import { app, BrowserWindow, dialog, Menu, nativeTheme, Notification, systemPreferences } from 'electron';
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer';
@@ -51,6 +52,7 @@ import * as webview from './main/webview';
 import * as window from './main/window';
 import * as workspace from './main/workspace';
 import KeyMonitor from './main/keymonitor';
+import { configureDataPaths } from './main/data_paths';
 
 let mcp: Mcp;
 let scheduler: Scheduler;
@@ -61,6 +63,11 @@ let keyMonitor: KeyMonitor;
 let dictation: Dictation;
 
 app.setName('Summon');
+configureDataPaths(app, process.env.WITSY_HOME);
+if (process.env.WITSY_HOME) {
+  // electron-log defaults to libraryDefaultDir, independently of Electron's logs path.
+  log.transports.file.resolvePathFn = () => path.join(app.getPath('logs'), 'main.log');
+}
 
 // first-thing: single instance
 // on darwin this is done through Info.plist (LSMultipleInstancesProhibited)
@@ -69,18 +76,6 @@ if (process.platform !== 'darwin' && !process.env.TEST) {
   if (!gotTheLock) {
     app.quit();
     process.exit(0);
-  }
-}
-
-// changes path
-if (process.env.WITSY_HOME) {
-  const originalGetPath = app.getPath.bind(app);
-  app.getPath = (name: string) => {
-    if (name === 'userData') {
-      return process.env.WITSY_HOME;
-    } else {
-      return originalGetPath(name as any);
-    }
   }
 }
 
@@ -146,6 +141,7 @@ const registerShortcuts = () => {
     studio: window.openDesignStudioWindow,
     forge: window.openAgentForgeWindow,
   });
+  registerContextWorkflowShortcuts();
   keyMonitor?.reload();
 }
 

@@ -74,7 +74,7 @@
         />
       </ButtonIcon>
       
-      <div class="model-menu-button" :id="`model-menu-button-${uniqueId}`" @click="onModelMenu">
+      <div v-if="enableModelSelection" class="model-menu-button" :id="`model-menu-button-${uniqueId}`" @click="onModelMenu">
         <BoxIcon />
         <div class="model-name">{{ modelName }}</div>
         <ChevronDownIcon class="icon caret" />
@@ -184,7 +184,7 @@
     />
     
     <EngineModelMenu
-      v-if="showModelMenu"
+      v-if="enableModelSelection && showModelMenu"
       :anchor="`#model-menu-button-${uniqueId}`"
       :position="menusPosition === 'above' ? 'above-right' : 'below-right'"
       @close="closeModelMenu"
@@ -264,6 +264,10 @@ const props = defineProps({
     type: String,
     required: false,
     default: t('prompt.placeholders.default')
+  },
+  enableModelSelection: {
+    type: Boolean,
+    default: true
   },
   enableInstructions: {
     type: Boolean,

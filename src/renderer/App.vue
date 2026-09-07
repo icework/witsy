@@ -15,6 +15,7 @@ import ComputerStatus from './screens/ComputerStatus.vue'
 import Debug from './screens/Debug.vue'
 import Dictation from './screens/Dictation.vue'
 import Main from './screens/Main.vue'
+import ScreenshotRegion from './screens/ScreenshotRegion.vue'
 import PromptAnywhere from './screens/PromptAnywhere.vue'
 import ReadAloud from './screens/ReadAloud.vue'
 import RealtimeChat from './screens/RealtimeChat.vue'
@@ -32,6 +33,7 @@ const appearanceTheme = useAppearanceTheme()
 const routes: { [key: string]: any } = {
   '/': Main,
   '/chat': Main,
+  '/capture': ScreenshotRegion,
   '/prompt': PromptAnywhere,
   '/commands': CommandPicker,
   '/dictation': Dictation,

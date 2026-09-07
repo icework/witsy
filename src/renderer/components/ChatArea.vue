@@ -21,7 +21,7 @@
       <div class="created-at" v-if="chat?.title && chat?.createdAt">{{ t('chat.startedAt', { date: formatDate(chat.createdAt) }) }}</div>
       <div class="flex-push"></div>
 
-      <ButtonIcon class="settings" @click="showModelSettings = !showModelSettings" v-if="store.isFeatureEnabled('chat.settings')">
+      <ButtonIcon class="settings" @click="showModelSettings = !showModelSettings" v-if="!chat?.runtime && store.isFeatureEnabled('chat.settings')">
         <SlidersHorizontalIcon />
       </ButtonIcon>
 
@@ -77,9 +77,9 @@
           <!-- <MoreVerticalIcon class="icon" @click="onMenu" />
         </div> -->
 
-        <MessageList class="chat-content-main" :chat="chat" :conversation-mode="conversationMode" v-if="chat?.hasMessages()" ref="messageList" />
+        <MessageList class="chat-content-main" :chat="chat" :conversation-mode="conversationMode" v-if="chat?.hasMessages() && !screenshotPending" ref="messageList" />
         
-        <EmptyChat class="chat-content-main" @run-agent="onRunAgent" v-else />
+        <EmptyChat class="chat-content-main" @run-agent="onRunAgent" v-else-if="!screenshotPending" />
         
         <div class="deep-research-usage" v-if="prompt?.isDeepResearchActive() && tipsManager.isTipAvailable('deepResearchUsage')">
           {{  t('deepResearch.usage') }}
@@ -88,11 +88,13 @@
           </div>
         </div>
         
-        <Prompt
+        <slot name="runtime" />
+        <Prompt v-if="!chat?.runtime && !screenshotPending"
           ref="prompt"
           class="prompt"
           :chat="chat"
           :enable-deep-research="true"
+          :enable-model-selection="enableModelSelection"
           :conversation-mode="conversationMode"
           :history-provider="historyProvider"
           :is-generating="isGenerating"
@@ -105,7 +107,7 @@
       
       </div>
       
-      <ModelSettings class="model-settings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
+      <ModelSettings v-if="!chat?.runtime" class="model-settings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
     
     </main>
 
@@ -140,6 +142,8 @@ const tipsManager = useTipsManager(store)
 const llmManager: ILlmManager = LlmFactory.manager(store.config)
 
 const props = defineProps({
+  enableModelSelection: { type: Boolean, default: true },
+  screenshotPending: { type: Boolean, default: false },
   chat: {
     type: Chat,
     required: true,
@@ -216,7 +220,7 @@ const onConversationMode = (mode: ConversationMode) => {
 }
 
 const onSetEngineModel = (engine: string, model: string) => {
-  llmManager.setChatModel(engine, model)
+  props.chat.setEngineModel(engine, model)
 }
 
 const onSendPrompt = (payload: SendPromptParams) => {

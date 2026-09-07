@@ -14,6 +14,7 @@ import { onBeforeUnmount } from 'vue'
 export type BusSignal =
   | 'audio-noise-detected'  // Global: Stop audio playback when noise detected (Prompt → *)
   | 'fullscreen'            // Global: Show media in fullscreen overlay (various → Fullscreen)
+  | 'chat-agent-settings-changed' // Cross-screen: Refresh saved agents and screenshot defaults after Settings edits
   | 'new-chat'              // Cross-screen: Create new chat (AudioBooth → Chat, Main)
   | 'set-main-window-mode'  // Cross-screen: Request main view change (AgentPicker, EmptyChat → Main)
 

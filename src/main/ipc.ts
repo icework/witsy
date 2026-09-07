@@ -1,3 +1,7 @@
+import * as contextWorkflows from './context_workflows'
+import * as chatAgents from './chat_agents'
+import * as screenshot from './screenshot_action'
+import { RuntimeService } from './runtimes/service'
 
 
 import { LlmTool } from 'multi-llm-ts';
@@ -7,7 +11,7 @@ import { Command, History } from 'types/index';
 import { McpInstallStatus, McpServerWithTools, McpTool } from 'types/mcp';
 import { Skill, SkillFileReadResult, SkillInstallResult, SkillSaveResult, SkillHeader, SkillUninstallResult } from 'types/skills';
 
-import { app, clipboard, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
 import Store from 'electron-store';
 import fontList from 'font-list';
 import path from 'node:path';
@@ -72,6 +76,34 @@ export const installIpc = (
   registerShortcuts: () => void,
   quitApp: () => void,
 ): void => {
+
+  ipcMain.handle(IPC.CONTEXT_WORKFLOW.LIST, () => contextWorkflows.listContextWorkflows())
+  ipcMain.handle(IPC.CONTEXT_WORKFLOW.SAVE, (_event, workflow) => contextWorkflows.saveContextWorkflow(workflow))
+  ipcMain.handle(IPC.CONTEXT_WORKFLOW.REMOVE, (_event, id) => contextWorkflows.removeContextWorkflow(id))
+  ipcMain.handle(IPC.CONTEXT_WORKFLOW.RUN, (_event, id) => contextWorkflows.runContextWorkflow(id))
+  ipcMain.handle(IPC.CHAT_AGENT.LIST, () => chatAgents.listChatAgents())
+  ipcMain.handle(IPC.CHAT_AGENT.SAVE, (_event, agent) => chatAgents.saveChatAgent(agent))
+  ipcMain.handle(IPC.CHAT_AGENT.REMOVE, (_event, id) => chatAgents.removeChatAgent(id))
+  ipcMain.handle(IPC.CHAT_AGENT.SETTINGS, (_event, settings) => settings ? screenshot.saveScreenshotSettings(settings) : screenshot.screenshotSettings())
+  ipcMain.handle(IPC.CHAT_AGENT.CAPTURE, (_event, fresh) => screenshot.captureScreenshot(fresh, fresh ? undefined : null))
+  ipcMain.handle(IPC.CHAT_AGENT.SOURCE, (event) => screenshot.screenshotSource(event.sender.id))
+  ipcMain.handle(IPC.CHAT_AGENT.FINISH, (event, region) => screenshot.finishScreenshot(event.sender.id, region))
+  ipcMain.handle(IPC.CHAT_AGENT.STATE, () => screenshot.screenshotState())
+  ipcMain.handle(IPC.CHAT_AGENT.UPDATE, (_event, update) => screenshot.updateScreenshot(update))
+
+  const runtimes = new RuntimeService()
+  ipcMain.handle(IPC.RUNTIME.LIST, () => runtimes.list())
+  ipcMain.handle(IPC.RUNTIME.SAVE, (_event, connection, secret, localProfile) => runtimes.save(connection, secret, localProfile))
+  ipcMain.handle(IPC.RUNTIME.CATALOG, (_event, binding) => runtimes.catalog(binding))
+  ipcMain.handle(IPC.RUNTIME.START, (event, chatId, binding, text, images) => runtimes.start(event.sender.id, chatId, binding, text, run => {
+    if (event.sender.isDestroyed()) return
+    const target = BrowserWindow.fromWebContents(event.sender)
+    if (target && !target.isDestroyed()) window.emitIpcEvent(target, 'runtime-run', run)
+    if (screenshot.screenshotState().chatId === chatId) screenshot.updateScreenshot({ busy: !['completed', 'failed', 'cancelled'].includes(run.status) })
+  }, images))
+  ipcMain.handle(IPC.RUNTIME.GET, (event, chatId) => runtimes.get(event.sender.id, chatId))
+  ipcMain.handle(IPC.RUNTIME.CANCEL, (event, chatId) => runtimes.cancel(event.sender.id, chatId))
+  ipcMain.handle(IPC.RUNTIME.APPROVE, (event, chatId, requestId, choice) => runtimes.approve(event.sender.id, chatId, requestId, choice))
 
   ipcMain.on(IPC.MAIN_WINDOW.UPDATE_MODE, (event, mode) => {
     window.setMainWindowMode(mode);

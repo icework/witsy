@@ -56,6 +56,7 @@ const callbackMap: Partial<Record<ActionName, keyof ChatCallbacks | 'readAloud'>
 }
 
 const isVisible = (action: ActionName): boolean => {
+  if (props.runtimeOwned && ['retry', 'edit', 'quote', 'delete', 'fork', 'tools'].includes(action)) return false
   if (hiddenMessageActions.includes(action)) return false
   const callbackName = callbackMap[action]
   if (!callbackName) return true
@@ -66,6 +67,7 @@ const isVisible = (action: ActionName): boolean => {
 const emit = defineEmits(['show-tools', 'edit-message'])
 
 const props = defineProps({
+  runtimeOwned: Boolean,
   message: {
     type: Message,
     required: true,

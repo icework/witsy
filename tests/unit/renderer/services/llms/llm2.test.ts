@@ -203,11 +203,14 @@ test('Can process format', async () => {
   expect(llmManager.canProcessFormat('openrouter', 'chat', 'ppt')).toBe(false)
 
   // without autoVisionSwitch
+  // A fresh isolated install has no model catalog yet: reject images without crashing.
+  expect(llmManager.canProcessFormat('openrouter', 'not-loaded', 'png')).toBe(false)
   expect(llmManager.canProcessFormat('openrouter', 'chat', 'jpg')).toBe(false)
   expect(llmManager.canProcessFormat('openrouter', 'vision', 'jpg')).toBe(true)
 
   // with autoVisionSwitch
   store.config.engines.openrouter.model.vision = 'vision'
+  expect(llmManager.canProcessFormat('openrouter', 'not-loaded', 'png')).toBe(true)
   expect(llmManager.canProcessFormat('openrouter', 'chat', 'jpg')).toBe(true)
   expect(llmManager.canProcessFormat('openrouter', 'vision', 'jpg')).toBe(true)
 

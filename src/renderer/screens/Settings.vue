@@ -11,6 +11,9 @@
           <SettingsTab class="llm" :title="t('settings.tabs.llm')" @change="load(settingsLLM)" :checked="initialTab == 'llm'"><BoxIcon class="icon" /></SettingsTab>
           <SettingsTab class="favorites" :title="t('settings.tabs.favorites')" @change="load(settingsFavorites)" :checked="initialTab == 'favorites'"><StarIcon class="icon" /></SettingsTab>
           <SettingsTab class="chat" :title="t('settings.tabs.chat')" @change="load(settingsChat)"><AppWindowIcon class="icon" /></SettingsTab>
+          <SettingsTab class="chatagents" :title="t('chatAgent.settingsTitle')" @change="load(settingsChatAgents)" :checked="initialTab == 'chatagents'"><BrainIcon class="icon" /></SettingsTab>
+          <SettingsTab class="contextworkflows" :title="t('contextWorkflow.title')" @change="load(settingsContextWorkflows)" :checked="initialTab == 'contextworkflows'"><WandIcon class="icon" /></SettingsTab>
+          <SettingsTab class="runtimeconnections" :title="t('runtime.connections')" @change="load(settingsRuntimeConnections)" :checked="initialTab == 'runtimeconnections'"><BlocksIcon class="icon" /></SettingsTab>
           <SettingsTab class="deepresearch" :title="t('settings.tabs.deepResearch')" @change="load(settingsDeepResearch)" :checked="initialTab == 'deepresearch'"><TelescopeIcon class="icon" /></SettingsTab>
           <SettingsTab class="models" :title="t('settings.tabs.models')" @change="load(settingsModels)" :checked="initialTab == 'models'"><BoxIcon class="icon" /></SettingsTab>
           <SettingsTab class="plugins" :title="t('settings.tabs.plugins')" @change="load(settingsPlugins)" :checked="initialTab == 'plugins'"><BlocksIcon class="icon" /></SettingsTab>
@@ -29,6 +32,9 @@
       <SettingsLLM ref="settingsLLM" />
       <SettingsFavorites ref="settingsFavorites" />
       <SettingsChat ref="settingsChat" />
+      <SettingsChatAgents ref="settingsChatAgents" />
+      <SettingsContextWorkflows ref="settingsContextWorkflows" />
+      <SettingsRuntimeConnections ref="settingsRuntimeConnections" />
       <SettingsDeepResearch ref="settingsDeepResearch" />
       <SettingsModels ref="settingsModels" />
       <SettingsPlugins ref="settingsPlugins" />
@@ -53,6 +59,9 @@ import { OpenSettingsPayload } from 'types/index'
 import { nextTick, onMounted, PropType, ref, watch } from 'vue'
 import SettingsAdvanced from '../settings/SettingsAdvanced.vue'
 import SettingsChat from '../settings/SettingsChat.vue'
+import SettingsChatAgents from '../settings/SettingsChatAgents.vue'
+import SettingsContextWorkflows from '../settings/SettingsContextWorkflows.vue'
+import SettingsRuntimeConnections from '../settings/SettingsRuntimeConnections.vue'
 import SettingsCommands from '../settings/SettingsCommands.vue'
 import SettingsDeepResearch from '../settings/SettingsDeepResearch.vue'
 import SettingsExperts from '../settings/SettingsExperts.vue'
@@ -88,6 +97,9 @@ const settingsGeneral = ref(null)
 const settingsLLM = ref(null)
 const settingsFavorites = ref(null)
 const settingsChat = ref(null)
+const settingsChatAgents = ref(null)
+const settingsContextWorkflows = ref(null)
+const settingsRuntimeConnections = ref(null)
 const settingsDeepResearch = ref(null)
 const settingsModels = ref(null)
 const settingsPlugins = ref(null)
@@ -106,6 +118,9 @@ const settings = [
   settingsLLM,
   settingsFavorites,
   settingsChat,
+  settingsChatAgents,
+  settingsContextWorkflows,
+  settingsRuntimeConnections,
   settingsDeepResearch,
   settingsModels,
   settingsPlugins,

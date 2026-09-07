@@ -295,7 +295,7 @@ export default class LlmManagerBase implements ILlmManager {
   canProcessFormat(engine: string, model: string, format: string) {
     if (imageFormats.includes(format.toLowerCase())) {
       const m = this.getChatModel(engine, model)
-      if (m.capabilities.vision) return true
+      if (m?.capabilities?.vision) return true
       return !!this.config.engines[engine].model?.vision
     } else {
       return textFormats.includes(format.toLowerCase()) || parseableTextFormats.includes(format.toLowerCase())

@@ -1,10 +1,11 @@
 
-import { enableAutoUnmount, mount, VueWrapper } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { defaultCapabilities } from 'multi-llm-ts'
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import ChatScreen from '@screens/Chat.vue'
 import ChatModel from '@models/chat'
 import { store } from '@services/store'
+import Assistant from '@services/assistant'
 import LlmMock from '@tests/mocks/llm'
 import { useBrowserMock, useWindowMock } from '@tests/mocks/window'
 import { stubTeleport } from '@tests/mocks/stubs'
@@ -19,7 +20,8 @@ vi.mock('@services/llms/manager.ts', async () => {
   LlmManager.prototype.getFavoriteId = () => 'favid'
   LlmManager.prototype.isFavoriteModel = vi.fn(() => false)
   LlmManager.prototype.getChatModels = vi.fn(() => [{ id: 'chat', name: 'chat', ...defaultCapabilities }])
-  LlmManager.prototype.getChatModel = vi.fn(() => ({ id: 'chat', name: 'chat', ...defaultCapabilities }))
+  LlmManager.prototype.getChatModel = vi.fn(() => ({ id: 'chat', name: 'chat', capabilities: { ...defaultCapabilities, vision: true } }))
+  LlmManager.prototype.isComputerUseModel = vi.fn(() => false)
   LlmManager.prototype.getChatEngineModel = () => ({ engine: 'mock', model: 'chat' })
   LlmManager.prototype.getChatEngines = vi.fn(() => ['mock'])
   LlmManager.prototype.hasChatModels = vi.fn(() => true)
@@ -55,6 +57,84 @@ test('Renders correctly', () => {
   const wrapper: VueWrapper<any> = mount(ChatScreen, { ...stubTeleport })
   expect(wrapper.exists()).toBe(true)
   expect(wrapper.find('.chat').exists()).toBe(true)
+  expect(wrapper.find('.prompt .model-menu-button').exists()).toBe(false)
+  expect(wrapper.findAll('.chat-configuration select')).toHaveLength(3)
+  expect(wrapper.find('.prompt textarea').exists()).toBe(true)
+})
+
+test('screenshot Ask uses the saved Native agent and image without an external runtime or temporary file', async () => {
+  const agent = { id: 'native-test', name: 'Native vision', kind: 'native' as const, native: { engine: 'mock', model: 'vision', instructions: 'Read images briefly', tools: [] } }
+  vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, image: 'data:image/png;base64,aGVsbG8=' })
+  const prompt = vi.spyOn(Assistant.prototype, 'prompt').mockResolvedValue('success')
+  const wrapper = mount(ChatScreen, { ...stubTeleport })
+  await flushPromises()
+  const picker = wrapper.find('.chat-agent-picker')
+  await picker.find('select').setValue(agent.id)
+  await picker.find('textarea').setValue('Name the colors')
+  await picker.find('input[type="checkbox"]').setValue(true)
+  await picker.find('form').trigger('submit')
+  await flushPromises()
+  expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Name the colors'), expect.objectContaining({ model: 'vision', instructions: 'Read images briefly', attachments: [expect.objectContaining({ content: 'aGVsbG8=' })] }), expect.any(Function), expect.any(Function))
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+  expect(window.api.file.save).not.toHaveBeenCalled()
+  expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith(expect.objectContaining({ busy: true, chatId: expect.any(String) }))
+  expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
+  expect(wrapper.vm.assistant.chat.temporary).toBe(true)
+  expect(store.history.chats.some(c => c.uuid === wrapper.vm.assistant.chat.uuid)).toBe(false)
+  prompt.mockRestore()
+})
+
+test('workflow prefills Native config without sending; a manual model override wins on send', async () => {
+  const agent = { id: 'native-preset', name: 'Preset', kind: 'native' as const, native: { engine: 'mock', model: 'vision', instructions: 'Template instruction', tools: [] } }
+  vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, contextKind: 'selected-text', requestId: 'prefill', contextText: 'Context to explain', agentId: agent.id, prompt: 'Explain briefly' })
+  const prompt = vi.spyOn(Assistant.prototype, 'prompt').mockResolvedValue('success')
+  const wrapper = mount(ChatScreen, { ...stubTeleport })
+  await flushPromises()
+  expect(wrapper.vm.assistant.chat.model).toBe('vision')
+  expect(prompt).not.toHaveBeenCalled()
+  const picker = wrapper.find('.chat-agent-picker')
+  await picker.findAll('.chat-configuration select')[2].setValue('chat')
+  expect(wrapper.vm.assistant.chat.model).toBe('chat')
+  await picker.find('form').trigger('submit'); await flushPromises()
+  expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Context to explain'), expect.objectContaining({ model: 'chat', instructions: 'Template instruction' }), expect.any(Function), expect.any(Function))
+  expect(agent.native.model).toBe('vision')
+  prompt.mockRestore()
+})
+
+test('manual text sends using the current chat without any saved Agent', async () => {
+  vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: false, capturing: false, busy: false, contextKind: 'selected-text', requestId: 'manual', contextText: 'Manual context' })
+  const prompt = vi.spyOn(Assistant.prototype, 'prompt').mockResolvedValue('success')
+  const wrapper = mount(ChatScreen, { ...stubTeleport })
+  await flushPromises()
+  const uuid = wrapper.vm.assistant.chat.uuid
+  await wrapper.find('.chat-agent-picker form').trigger('submit'); await flushPromises()
+  expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Manual context'), expect.objectContaining({ model: 'chat' }), expect.any(Function), expect.any(Function))
+  expect(wrapper.vm.assistant.chat.uuid).toBe(uuid)
+  expect(wrapper.vm.assistant.chat.chatAgent).toBeUndefined()
+  prompt.mockRestore()
+})
+
+test.each(['native', 'hermes'] as const)('removing a screenshot keeps the %s chat draft and configuration', async kind => {
+  const agent = kind === 'native'
+    ? { id: 'draft-agent', name: 'Native', kind, native: { engine: 'mock', model: 'vision', tools: [] } }
+    : { id: 'draft-agent', name: 'Hermes', kind, binding: { kind, connectionId: 'local', profile: 'research' } }
+  vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, image: 'data:image/png;base64,aGVsbG8=' })
+  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
+  const picker = wrapper.find('.chat-agent-picker')
+  await picker.find('select').setValue(agent.id)
+  const uuid = wrapper.vm.assistant.chat.uuid
+  await picker.find('textarea').setValue('Keep my question')
+  await picker.find('.screenshot-attachment button').trigger('click'); await flushPromises()
+  expect(picker.find('img').exists()).toBe(false)
+  expect(wrapper.vm.assistant.chat.uuid).toBe(uuid)
+  expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
+  if (kind === 'hermes') expect(wrapper.find('.runtime-chat textarea').element.value).toBe('Keep my question')
+  else expect(wrapper.find('.prompt textarea').element.value).toBe('Keep my question')
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
 })
 
 test('Registers window API event listeners', async () => {

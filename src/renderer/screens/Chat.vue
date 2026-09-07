@@ -1,7 +1,9 @@
 <template>
-  <div class="chat split-pane">
-    <ChatSidebar :chat="assistant.chat" :generating-chat-ids="generatingChatIds" ref="sidebar" />
-    <ChatArea :chat="assistant.chat" :is-left-most="!isSidebarVisible" ref="chatArea" @prompt="onSendPrompt" @stop-generation="onStopGeneration" @toggle-sidebar="onToggleSidebar" />
+  <div class="chat split-pane" :class="{ 'quick-chat': screenshot.compact }">
+    <ChatSidebar v-show="!screenshot.compact" :chat="assistant.chat" :generating-chat-ids="generatingChatIds" ref="sidebar" />
+    <ChatArea :enable-model-selection="mode !== 'chat'" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" :chat="assistant.chat" :is-left-most="!isSidebarVisible" ref="chatArea" @prompt="onSendPrompt" @stop-generation="onStopGeneration" @toggle-sidebar="onToggleSidebar">
+      <template #runtime><ChatAgentPicker v-if="mode === 'chat' && assistant.chat" ref="agentPicker" :chat="assistant.chat" :busy="isGenerating || !!assistant.chat.lastMessage()?.transient" @configure="onChatConfiguration" @select="onChatAgent" @ask="onScreenshotAsk" @removed-screenshot="onScreenshotRemoved" @compact="onScreenshotState" /><RuntimeChat v-show="!screenshot.image && screenshot.contextKind !== 'selected-text'" v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" ref="runtimeChat" @bind="onRuntimeBinding" @progress="latestChunk = { type: 'content', text: '', done: false }" /></template>
+    </ChatArea>
     <ChatEditor :chat="assistant.chat" :dialog-title="chatEditorTitle" :confirm-button-text="chatEditorConfirmButtonText" :on-confirm="chatEditorCallback" ref="chatEditor" />
     <CreateAgentRun :title="agent?.name ?? ''" ref="builder" />
     <AgentPicker ref="picker" />
@@ -10,6 +12,11 @@
 
 <script setup lang="ts">
 
+import ChatAgentPicker from '@components/ChatAgentPicker.vue'
+import { ChatAgent, ScreenshotState } from '../../types/chat_agent'
+import Attachment from '@models/attachment'
+import RuntimeChat from '@components/RuntimeChat.vue'
+import { RuntimeBinding } from '../../types/runtime'
 import ChatArea from '@components/ChatArea.vue'
 import ChatSidebar from '@components/ChatSidebar.vue'
 import CreateAgentRun from '@components/CreateAgentRun.vue'
@@ -60,6 +67,9 @@ const llmManager = LlmFactory.manager(store.config)
 
 // provide chunk for MessageList (scoped to this component tree)
 const latestChunk = ref<LlmChunk | null>(null)
+const runtimeChat = ref<InstanceType<typeof RuntimeChat>>()
+const agentPicker = ref<InstanceType<typeof ChatAgentPicker>>()
+const screenshot = ref<ScreenshotState>({ capturing: false, compact: false, busy: false })
 provide('latestChunk', latestChunk)
 
 // provide generating state for Prompt component
@@ -195,6 +205,7 @@ const setSessionStatus = (chatId: string, status: ChatSessionStatus) => {
   const session = sessions.value[chatId]
   if (session) {
     session.status = status
+  if (screenshot.value.chatId === chatId) void window.api.chatAgents.screenshotUpdate({ busy: status === 'generating' })
   }
 }
 
@@ -292,6 +303,7 @@ onMounted(() => {
 })
 
 const onNewChat = async (payload?: any) => {
+  if (payload?.runtime) { onRuntimeBinding(payload.runtime); return }
   const { prompt, attachments, submit } = payload || {}
 
   // create a new chat and session
@@ -307,6 +319,67 @@ const onNewChat = async (payload?: any) => {
   latestChunk.value = null
   if (submit) {
     chatArea.value?.sendPrompt()
+  }
+}
+
+const onRuntimeBinding = (binding?: RuntimeBinding) => {
+  const chat = new Chat()
+  chat.runtime = binding
+  setActiveSession(chat.uuid, chat)
+  if (!binding) updateChatEngineModel()
+  latestChunk.value = null
+}
+
+const onChatConfiguration = (config: { runtime?: RuntimeBinding; engine?: string; model?: string }) => {
+  if (config.runtime || assistant.value.chat.runtime) onRuntimeBinding(config.runtime)
+  if (!config.runtime) assistant.value.chat.setEngineModel(config.engine, config.model)
+  if (assistant.value.chat.hasMessages() && !assistant.value.chat.temporary) store.saveHistory()
+}
+
+const onChatAgent = (agent: ChatAgent) => {
+  const chat = new Chat()
+  chat.chatAgent = JSON.parse(JSON.stringify(agent))
+  if (agent.kind === 'native') {
+    const config = chat.chatAgent.native
+    chat.setEngineModel(config.engine, config.model)
+    chat.instructions = config.instructions
+    chat.tools = config.tools
+    chat.modelOpts = config.modelOpts
+  } else chat.runtime = { ...agent.binding }
+  setActiveSession(chat.uuid, chat)
+  latestChunk.value = null
+  return chat
+}
+const onScreenshotState = (state: ScreenshotState) => {
+  screenshot.value = state
+  if (state.compact && state.chatId && state.chatId !== assistant.value.chat.uuid) {
+    const chat = store.history.chats.find(c => c.uuid === state.chatId)
+    if (chat) onSelectChat(chat)
+  }
+}
+const onScreenshotRemoved = async (question: string) => {
+  await nextTick()
+  if (assistant.value.chat.runtime) runtimeChat.value?.setPrompt(question)
+  else chatArea.value?.setPrompt(question)
+}
+const onScreenshotAsk = async (payload: { agent: ChatAgent; image?: string; text?: string; question: string; temporary: boolean }) => {
+  if (screenshot.value.busy) return
+  screenshot.value.busy = true
+  const chat = assistant.value.chat
+  if (!chat.hasMessages()) chat.temporary = payload.temporary
+  const prompt = payload.image ? `${payload.question}\n\nThis is a screenshot question. Answer using the attached image. Do not change files or take external actions unless I explicitly ask you to.` : `${payload.question}\n\nSelected text (context):\n${payload.text || ''}`
+  try {
+    await nextTick()
+    await window.api.chatAgents.screenshotUpdate({ chatId: chat.uuid, busy: true })
+    if (chat.runtime) await runtimeChat.value.sendMessage(prompt, payload.image ? [payload.image] : [])
+    else {
+      const mimeType = payload.image?.slice(5, payload.image.indexOf(';'))
+      await onSendPrompt({ prompt, attachments: payload.image ? [new Attachment(payload.image.slice(payload.image.indexOf(',') + 1), mimeType)] : [], instructions: chat.instructions, docrepos: [], expert: null, skill: null, execMode: 'prompt' })
+      await window.api.chatAgents.screenshotUpdate({ busy: false })
+    }
+  } catch (e) {
+    await window.api.chatAgents.screenshotUpdate({ busy: false })
+    agentPicker.value?.reportError(e instanceof Error ? e.message : String(e))
   }
 }
 
@@ -376,7 +449,7 @@ const onNewChatInFolder = (folderId: string) => {
 }
 
 const updateChatEngineModel = () => {
-  if (!assistant.value.chat.hasMessages()) {
+  if (!assistant.value.chat.hasMessages() && !assistant.value.chat.runtime && !assistant.value.chat.chatAgent) {
     const { engine, model } = llmManager.getChatEngineModel()
     assistant.value.chat.setEngineModel(engine, model)
     store.initChatWithDefaults(assistant.value.chat)
@@ -646,7 +719,7 @@ const onSendPrompt = async (params: SendPromptParams) => {
   }
 
   // make sure we can have an llm
-  session.assistant.initLlm(store.config.llm.engine)
+  session.assistant.initLlm(session.assistant.chat.engine || store.config.llm.engine)
   if (!session.assistant.hasLlm()) {
     const rc = await Dialog.show({
       title: t('prompt.noEngineAvailable.title'),
@@ -663,7 +736,7 @@ const onSendPrompt = async (params: SendPromptParams) => {
 
   // save the attachment
   for (const attachment of attachments ?? []) {
-    if (attachment?.saved === false) {
+    if (attachment?.saved === false && !session.assistant.chat.temporary) {
       await attachment.loadContents()
       const fileUrl = saveFileContents(attachment.format(), attachment.b64Contents())
       if (fileUrl) {

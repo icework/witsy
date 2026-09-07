@@ -1,3 +1,5 @@
+import { ChatAgent } from '../types/chat_agent'
+import { RuntimeBinding } from '../types/runtime'
 
 import { LlmModelOpts } from 'multi-llm-ts'
 import { Chat as ChatBase } from 'types/index'
@@ -8,6 +10,8 @@ export const DEFAULT_TITLE = 'New Chat'
 
 export default class Chat implements ChatBase {
 
+  runtime?: RuntimeBinding
+  chatAgent?: ChatAgent
   uuid: string
   title?: string
   createdAt: number
@@ -39,6 +43,8 @@ export default class Chat implements ChatBase {
   static fromJson(obj: any): Chat {
     const chat = new Chat()
     chat.uuid = obj.uuid || crypto.randomUUID()
+    chat.chatAgent = obj.chatAgent ? JSON.parse(JSON.stringify(obj.chatAgent)) : undefined
+    chat.runtime = obj.runtime ? { ...obj.runtime } : undefined
     chat.title = obj.title
     chat.createdAt = obj.createdAt
     chat.lastModified = obj.lastModified || obj.createdAt
@@ -65,6 +71,9 @@ export default class Chat implements ChatBase {
     if (this.title !== obj.title || this.lastModified !== obj.lastModified) {
       patched = true
     }
+
+    this.chatAgent = obj.chatAgent ? JSON.parse(JSON.stringify(obj.chatAgent)) : undefined
+    this.runtime = obj.runtime ? { ...obj.runtime } : undefined
 
     // header
     this.title = obj.title
@@ -156,6 +165,7 @@ export default class Chat implements ChatBase {
   fork(message: Message): Chat {
     const fork = Chat.fromJson(this)
     fork.uuid = crypto.randomUUID()
+    if (fork.runtime) delete fork.runtime.sessionId
     fork.lastModified = Date.now()
     fork.messages = []
     for (const msg of this.messages) {
