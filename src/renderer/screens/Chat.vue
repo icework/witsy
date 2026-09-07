@@ -462,11 +462,13 @@ const onScreenshotAsk = async (payload: { agent: ChatAgent; image?: string; text
   if (screenshot.value.busy) return
   screenshot.value.busy = true
   const chat = assistant.value.chat
+  const hideAfterSubmit = screenshot.value.workflowMode === 'task'
   if (!chat.hasMessages()) chat.temporary = payload.temporary
   const prompt = payload.image ? `${payload.question}\n\nThis is a screenshot question. Answer using the attached image. Do not change files or take external actions unless I explicitly ask you to.` : `${payload.question}\n\nSelected text (context):\n${payload.text || ''}`
   try {
     await nextTick()
     await window.api.chatAgents.screenshotUpdate({ chatId: chat.uuid, busy: true })
+    if (hideAfterSubmit) await window.api.chatAgents.screenshotUpdate({ hide: true })
     if (chat.runtime) await runtimeChat.value.sendMessage(prompt, payload.image ? [payload.image] : [])
     else {
       const mimeType = payload.image?.slice(5, payload.image.indexOf(';'))

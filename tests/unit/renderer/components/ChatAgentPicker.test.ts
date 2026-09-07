@@ -70,6 +70,20 @@ test('selected text workflow preselects its Agent and task, then sends edited te
   expect(wrapper.find('img').exists()).toBe(false)
 })
 
+test('background task mode submits with Enter while Shift+Enter remains available for editing', async () => {
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValue({ compact: true, capturing: false, busy: false, contextKind: 'selected-text', contextText: 'Context', workflowMode: 'task', prompt: 'Summarize' })
+  const chat = new Chat(); chat.runtime = { ...agents[0].binding }; chat.chatAgent = agents[0]
+  const wrapper = mount(ChatAgentPicker, { props: { chat } }); await flushPromises()
+  const prompt = wrapper.findAll('textarea')[1]
+  expect(wrapper.text()).toContain('contextWorkflow.runTask')
+  await prompt.trigger('keydown', { key: 'Enter', shiftKey: true })
+  expect(wrapper.emitted('ask')).toBeUndefined()
+  await prompt.trigger('keydown', { key: 'Enter' }); await flushPromises()
+  expect(wrapper.emitted('ask')?.[0][0]).toMatchObject({ text: 'Context', question: 'Summarize' })
+  await prompt.trigger('keydown', { key: 'Enter' }); await flushPromises()
+  expect(wrapper.emitted('ask')).toHaveLength(1)
+})
+
 test('manual context controls work without saved Agents or a Workflow', async () => {
   vi.mocked(window.api.chatAgents.list).mockResolvedValue([])
   const wrapper = mount(ChatAgentPicker, { props: { chat: new Chat() } })
@@ -82,10 +96,11 @@ test('manual context controls work without saved Agents or a Workflow', async ()
   expect(wrapper.find('select[aria-label="contextWorkflow.run"]').exists()).toBe(false)
 })
 
-test('retaking a workflow screenshot preserves manual task edits and does not reapply the Agent', async () => {
-  const initial = { compact: true, capturing: false, busy: false, requestId: 'first', image: 'data:image/png;base64,first', agentId: 'h', prompt: 'Preset question' }
+test('retaking a task screenshot preserves manual edits and Enter submission without reapplying the Agent', async () => {
+  const initial = { compact: true, capturing: false, busy: false, contextKind: 'screenshot' as const, requestId: 'first', image: 'data:image/png;base64,first', agentId: 'h', prompt: 'Preset question', workflowName: 'Background screenshot', workflowMode: 'task' as const }
   vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValue(initial)
-  const wrapper = mount(ChatAgentPicker, { props: { chat: new Chat() } }); await flushPromises()
+  const chat = new Chat(); chat.runtime = { ...agents[0].binding }; chat.chatAgent = agents[0]
+  const wrapper = mount(ChatAgentPicker, { props: { chat } }); await flushPromises()
   expect(wrapper.find('textarea').element.value).toBe('Preset question')
   await wrapper.find('textarea').setValue('Manually edited question')
   await wrapper.findAll('form button')[1].trigger('click'); await flushPromises()
@@ -95,6 +110,10 @@ test('retaking a workflow screenshot preserves manual task edits and does not re
   expect(wrapper.find('textarea').element.value).toBe('Manually edited question')
   expect(wrapper.emitted('select')).toHaveLength(1)
   expect(wrapper.find('img').attributes('src')).toBe('data:image/png;base64,second')
+  expect(wrapper.text()).toContain('Background screenshot')
+  expect(wrapper.find('.primary').text()).toBe('contextWorkflow.runTask')
+  await wrapper.find('textarea').trigger('keydown', { key: 'Enter' }); await flushPromises()
+  expect(wrapper.emitted('ask')?.[0][0]).toMatchObject({ image: 'data:image/png;base64,second', question: 'Manually edited question' })
 })
 
 test('manual screenshot starts with an empty question and can be removed without submitting', async () => {

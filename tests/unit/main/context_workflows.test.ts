@@ -31,7 +31,7 @@ test('different workflow shortcuts route to their own input and Agent; disable u
   saveContextWorkflow({ ...listContextWorkflows()[0], accelerator: 'Command+Shift+2', agentId: 'agent' })
   saveContextWorkflow(selection)
   state.keys.get('Command+Shift+7')()
-  expect(captureSelectedText).toHaveBeenCalledWith(selection)
+  expect(captureSelectedText).toHaveBeenCalledWith({ ...selection, mode: 'chat' })
   state.keys.get('Command+Shift+2')()
   expect(captureScreenshot).toHaveBeenCalledWith(false, expect.objectContaining({ contextInput: 'screenshot', agentId: 'agent' }))
   saveContextWorkflow({ ...selection, enabled: false })

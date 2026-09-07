@@ -25,12 +25,14 @@ export interface ScreenshotState {
   agentId?: string
   prompt?: string
   workflowName?: string
+  workflowMode?: 'chat' | 'task'
 }
 export interface ContextWorkflow {
   schemaVersion: 1
   id: string
   name: string
   contextInput: 'screenshot' | 'selected-text'
+  mode?: 'chat' | 'task'
   agentId?: string
   prompt: string
   accelerator: string

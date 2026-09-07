@@ -68,7 +68,7 @@ export const openQuickChat = (fresh = false): void => {
 
 export const updateScreenshot = (update: { manualText?: boolean; dismiss?: boolean; chatId?: string; busy?: boolean; expand?: boolean; hide?: boolean }) => {
   if (update.manualText && !state.busy && !state.capturing && !state.image && state.contextKind !== 'selected-text') { beginContext('selected-text', null); state.error = undefined }
-  if (update.dismiss) { state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.error = undefined }
+  if (update.dismiss) { state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.workflowMode = undefined; state.error = undefined }
   if (update.chatId) { state.chatId = update.chatId; state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.error = undefined }
   if (update.busy !== undefined && (!update.chatId || update.chatId === state.chatId)) state.busy = update.busy
   if (update.expand && mainWindow) {
@@ -115,7 +115,12 @@ export const captureScreenshot = async (fresh = false, workflow?: ContextWorkflo
   if (state.busy || ((state.image || state.contextKind === 'selected-text') && !fresh)) { show(); return }
   if (process.platform !== 'darwin') { state.error = 'Region capture is currently available on macOS.'; show(); return }
   if (systemPreferences.getMediaAccessStatus('screen') === 'denied') { state.error = 'Enable Screen Recording for Summon (Electron in development) in macOS System Settings, then restart the app.'; show(); return }
+  // Retake replaces only the pending image; a new ordinary capture starts clean.
+  const previousWorkflow = fresh && workflow === undefined && state.contextKind === 'screenshot' && state.image
+    ? { agentId: state.agentId, prompt: state.prompt, workflowName: state.workflowName, workflowMode: state.workflowMode }
+    : undefined
   beginContext('screenshot', workflow)
+  if (previousWorkflow) Object.assign(state, previousWorkflow)
   state.capturing = true; state.error = undefined
   publish()
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
@@ -148,7 +153,7 @@ const beginContext = (kind: 'screenshot' | 'selected-text', workflow?: ContextWo
   state.quickChatRequest = undefined
   state.contextKind = kind; state.contextText = undefined; state.image = undefined; state.chatId = undefined
   state.requestId = crypto.randomUUID()
-  if (workflow !== undefined) { state.agentId = workflow?.agentId; state.prompt = workflow?.prompt; state.workflowName = workflow?.name }
+  state.agentId = workflow?.agentId; state.prompt = workflow?.prompt; state.workflowName = workflow?.name; state.workflowMode = workflow?.mode || 'chat'
 }
 export const captureSelectedText = async (workflow: ContextWorkflow): Promise<void> => {
   if (state.capturing) { overlay?.show(); return }

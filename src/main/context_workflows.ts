@@ -44,7 +44,8 @@ export const saveContextWorkflow = (input: ContextWorkflow): ContextWorkflow => 
   const accelerator = input.accelerator?.trim() || ''
   if (accelerator && !/(Command|Control|Ctrl|Alt|Option|CmdOrCtrl|CommandOrControl)\+/i.test(accelerator)) throw new Error('Use a shortcut with Command, Control or Option.')
   if (input.agentId && !listChatAgents().some(a => a.id === input.agentId)) throw new Error('The selected Agent no longer exists. Choose another Agent.')
-  const item: ContextWorkflow = { schemaVersion: 1, id: input.id || crypto.randomUUID(), name: input.name.trim(), contextInput: input.contextInput, agentId: input.agentId || undefined, prompt: input.prompt?.trim() || '', accelerator, enabled: !!input.enabled }
+  if (input.mode && !['chat', 'task'].includes(input.mode)) throw new Error('Choose a valid workflow mode.')
+  const item: ContextWorkflow = { schemaVersion: 1, id: input.id || crypto.randomUUID(), name: input.name.trim(), contextInput: input.contextInput, mode: input.mode || 'chat', agentId: input.agentId || undefined, prompt: input.prompt?.trim() || '', accelerator, enabled: !!input.enabled }
   const items = listContextWorkflows()
   if (item.enabled && accelerator && items.some(w => w.id !== item.id && w.enabled && w.accelerator.toLowerCase() === accelerator.toLowerCase())) throw new Error('Another workflow uses this shortcut. The previous settings are unchanged.')
   const previous = registered.get(item.id)

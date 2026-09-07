@@ -4,8 +4,8 @@
     <ul>
       <li v-for="workflow in workflows" :key="workflow.id" :class="{ disabled: !workflow.enabled }">
         <div class="workflow-symbol"><CameraIcon v-if="workflow.contextInput === 'screenshot'" /><TextSelectIcon v-else /></div>
-        <div><strong>{{ workflow.name }}</strong><p>{{ t('contextWorkflow.' + workflow.contextInput) }} · {{ agents.find(a => a.id === workflow.agentId)?.name || t('chatAgent.chooseAfter') }}</p><kbd v-if="workflow.accelerator">{{ workflow.accelerator }}</kbd></div>
-        <button :disabled="working || !workflow.enabled" @click="run(workflow.id)">{{ workflow.enabled ? t('contextWorkflow.openChat') : t('contextWorkflow.disabled') }}<ArrowUpRightIcon /></button>
+        <div><strong>{{ workflow.name }}</strong><p>{{ t('contextWorkflow.' + workflow.contextInput) }} · {{ t(workflow.mode === 'task' ? 'contextWorkflow.taskMode' : 'contextWorkflow.chatMode') }} · {{ agents.find(a => a.id === workflow.agentId)?.name || t('chatAgent.chooseAfter') }}</p><kbd v-if="workflow.accelerator">{{ workflow.accelerator }}</kbd></div>
+        <button :disabled="working || !workflow.enabled" @click="run(workflow.id)">{{ workflow.enabled ? t(workflow.mode === 'task' ? 'contextWorkflow.prepareTask' : 'contextWorkflow.openChat') : t('contextWorkflow.disabled') }}<ArrowUpRightIcon /></button>
       </li>
     </ul>
     <p v-if="!workflows.length">{{ t('contextWorkflow.empty') }}</p>

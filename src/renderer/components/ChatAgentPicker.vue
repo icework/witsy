@@ -22,14 +22,14 @@
         <button type="button" @click="removeScreenshot" :disabled="working || busy || state.busy">{{ t('chatAgent.removeScreenshot') }}</button>
       </div>
       <strong>{{ state.workflowName || t('agentDesign.contextTitle') }}</strong>
-      <p>{{ state.image ? t('chatAgent.previewHelp') : t('contextWorkflow.previewHelp') }}</p>
+      <p>{{ t(state.workflowMode === 'task' ? 'contextWorkflow.taskPreviewHelp' : (state.image ? 'chatAgent.previewHelp' : 'contextWorkflow.previewHelp')) }}</p>
       <form class="context-composer" @submit.prevent="ask">
         <label class="context-field" v-if="state.contextKind === 'selected-text'"><span>{{ t('contextWorkflow.selected-text') }}</span><textarea v-model="contextText" :aria-label="t('contextWorkflow.selected-text')" rows="4" maxlength="64000" /></label>
-        <label class="context-field"><span>{{ t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question') }}</span><textarea v-model="question" :aria-label="t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question')" rows="2" /></label>
+        <label class="context-field"><span>{{ t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question') }}</span><textarea v-model="question" :aria-label="t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question')" rows="2" @keydown="onQuestionKeydown" /></label>
         <label class="temporary-toggle"><input type="checkbox" v-model="temporary" :disabled="chat.hasMessages()" /> {{ t('chatAgent.temporary') }}</label>
         <div class="context-settings"><slot name="composer-controls" /></div>
         <div class="agent-row context-composer-actions">
-          <button class="primary" type="submit" :disabled="working || busy || state.busy || !question.trim()">{{ t('chatAgent.ask') }}</button>
+          <button class="primary" type="submit" :disabled="working || submitted || busy || state.busy || !question.trim()">{{ t(state.workflowMode === 'task' ? 'contextWorkflow.runTask' : 'chatAgent.ask') }}</button>
           <button v-if="state.image" type="button" @click="retake" :disabled="working">{{ t('chatAgent.retake') }}</button>
           <button type="button" @click="window.api.chatAgents.screenshotUpdate({ dismiss: true })">{{ t('common.cancel') }}</button>
         </div>
@@ -55,7 +55,7 @@ const manager = LlmFactory.manager(store.config)
 const agents = ref<ChatAgent[]>([])
 const pickerElement = ref<HTMLElement>()
 const selected = ref(''), question = ref(''), contextText = ref(''), error = ref('')
-const working = ref(false), temporary = ref(false)
+const working = ref(false), submitted = ref(false), temporary = ref(false)
 let retaking = false
 const state = ref<ScreenshotState>({ capturing: false, compact: false, busy: false })
 const pending = computed(() => !!state.value.image || state.value.contextKind === 'selected-text')
@@ -65,6 +65,7 @@ const attempt = async (action: () => Promise<void>) => {
 }
 const receive = (next: ScreenshotState) => {
   if (!next.capturing && (next.image || next.contextKind === 'selected-text') && (next.requestId !== state.value.requestId || next.image !== state.value.image || next.contextKind !== state.value.contextKind || state.value.capturing)) {
+    submitted.value = false
     void nextTick(() => { if (pickerElement.value) pickerElement.value.scrollTop = 0 })
     if (!retaking) {
       const agent = agents.value.find(a => a.id === next.agentId)
@@ -102,23 +103,32 @@ const removeScreenshot = () => attempt(async () => {
 })
 const retake = () => { retaking = true; void attempt(async () => { await window.api.chatAgents.capture(true) }) }
 const addText = () => attempt(async () => { await window.api.chatAgents.screenshotUpdate({ manualText: true }) })
-const ask = () => attempt(async () => {
-  if (props.busy || state.value.busy || !pending.value || !question.value.trim()) return
-  const chat = props.chat
-  const agent: ChatAgent = {
-    id: chat.chatAgent?.id || '', name: chat.chatAgent?.name || '', kind: chat.runtime?.kind || 'native',
-    ...(chat.runtime ? { binding: { ...chat.runtime } } : { native: { engine: chat.engine, model: chat.model, instructions: chat.instructions, tools: chat.tools, modelOpts: chat.modelOpts } }),
-  }
-  if (state.value.contextKind === 'selected-text' && !contextText.value.trim()) throw new Error(t('contextWorkflow.emptySelection'))
-  if (state.value.image && agent.kind === 'native') {
-    if (!manager.getChatModel(agent.native.engine, agent.native.model)?.capabilities?.vision) throw new Error(t('chatAgent.noVision'))
-  } else if (agent.kind !== 'native') {
-    const options = await window.api.runtime.catalog({ ...agent.binding })
-    if (state.value.image && agent.kind === 'opencode' && (!agent.binding.model || !agent.binding.provider)) throw new Error(t('chatAgent.explicitModel'))
-    if (state.value.image && agent.kind === 'opencode' && !options.models.some(m => m.provider === agent.binding.provider && m.id === agent.binding.model && m.vision)) throw new Error(t('chatAgent.noVision'))
-  }
-  emit('ask', { agent, ...(state.value.image ? { image: state.value.image } : { text: contextText.value }), question: question.value.trim(), temporary: temporary.value })
-})
+const ask = () => {
+  if (working.value || submitted.value) return
+  return attempt(async () => {
+    if (props.busy || state.value.busy || !pending.value || !question.value.trim()) return
+    const chat = props.chat
+    const agent: ChatAgent = {
+      id: chat.chatAgent?.id || '', name: chat.chatAgent?.name || '', kind: chat.runtime?.kind || 'native',
+      ...(chat.runtime ? { binding: { ...chat.runtime } } : { native: { engine: chat.engine, model: chat.model, instructions: chat.instructions, tools: chat.tools, modelOpts: chat.modelOpts } }),
+    }
+    if (state.value.contextKind === 'selected-text' && !contextText.value.trim()) throw new Error(t('contextWorkflow.emptySelection'))
+    if (state.value.image && agent.kind === 'native') {
+      if (!manager.getChatModel(agent.native.engine, agent.native.model)?.capabilities?.vision) throw new Error(t('chatAgent.noVision'))
+    } else if (agent.kind !== 'native') {
+      const options = await window.api.runtime.catalog({ ...agent.binding })
+      if (state.value.image && agent.kind === 'opencode' && (!agent.binding.model || !agent.binding.provider)) throw new Error(t('chatAgent.explicitModel'))
+      if (state.value.image && agent.kind === 'opencode' && !options.models.some(m => m.provider === agent.binding.provider && m.id === agent.binding.model && m.vision)) throw new Error(t('chatAgent.noVision'))
+    }
+    submitted.value = true
+    emit('ask', { agent, ...(state.value.image ? { image: state.value.image } : { text: contextText.value }), question: question.value.trim(), temporary: temporary.value })
+  })
+}
+const onQuestionKeydown = (event: KeyboardEvent) => {
+  if (working.value || submitted.value || state.value.workflowMode !== 'task' || event.key !== 'Enter' || event.shiftKey || event.isComposing) return
+  event.preventDefault()
+  void ask()
+}
 const addContext = (kind: 'screenshot' | 'text') => {
   if (working.value || props.busy || state.value.busy || state.value.capturing || pending.value) return
   return kind === 'screenshot' ? capture() : addText()
