@@ -49,6 +49,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks()
   store.config.prompt.defaultAgentId = ''
+  store.config.chatHistory.incognito = false
   vi.mocked(window.api.chatAgents.list).mockResolvedValue([])
 })
 
@@ -250,6 +251,15 @@ test('onNewChat initializes a new chat', async () => {
 
   // Should have a fresh chat
   expect(wrapper.vm.assistant.chat.messages).toHaveLength(0)
+})
+
+test('onNewChat respects the incognito default', async () => {
+  store.config.chatHistory.incognito = true
+  const wrapper: VueWrapper<any> = mount(ChatScreen, { ...stubTeleport })
+  await wrapper.vm.newChat()
+
+  expect(wrapper.vm.assistant.chat.temporary).toBe(true)
+  expect(wrapper.find('.incognito-badge').exists()).toBe(true)
 })
 
 test('onNewChat with payload sets prompt', async () => {

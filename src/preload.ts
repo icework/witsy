@@ -168,7 +168,7 @@ contextBridge.exposeInMainWorld(
     },
     history: {
       load: (workspaceId: string): History => { return JSON.parse(ipcRenderer.sendSync(IPC.HISTORY.LOAD, workspaceId)) },
-      save: (workspaceId: string, data: History) => { return ipcRenderer.send(IPC.HISTORY.SAVE, JSON.stringify({ workspaceId, history: data })) },
+      save: (workspaceId: string, data: History, archiveFolder?: string) => { return ipcRenderer.send(IPC.HISTORY.SAVE, JSON.stringify({ workspaceId, history: data, archiveFolder })) },
     },
     automation: {
       getText: (id: string): string => { return ipcRenderer.sendSync(IPC.AUTOMATION.GET_TEXT, id) },

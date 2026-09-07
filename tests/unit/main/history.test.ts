@@ -1,6 +1,6 @@
 
 import { expect, test, vi, describe } from 'vitest'
-import { extractAttachmentsFromHistory, listUnusedAttachments, loadHistory, saveHistory, kUnusedDelay } from '@main/history'
+import { archiveHistoryAsMarkdown, chatAsMarkdown, extractAttachmentsFromHistory, listUnusedAttachments, loadHistory, saveHistory, kUnusedDelay } from '@main/history'
 import { App, app } from 'electron'
 import { kHistoryVersion } from '@/consts'
 import Chat from '@models/chat'
@@ -21,6 +21,7 @@ vi.mock('fs', async (importOriginal) => {
   return { default: {
     ...mod,
     unlinkSync: vi.fn(),
+    mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
     existsSync: vi.fn(() => true),
     readFileSync: vi.fn((path: string, encoding?: string) => realReadFileSync(path, encoding)),
@@ -73,6 +74,31 @@ test('Save history', async () => {
   const history = await loadHistory(app, 'test-workspace')
   await saveHistory(app, 'test-workspace', history)
   expect(fs.writeFileSync).toHaveBeenLastCalledWith('tests/fixtures/workspaces/test-workspace/history.json', expect.any(String))
+})
+
+test('Archive history as Markdown', () => {
+  const saved = Chat.fromJson({
+    uuid: 'chat-1',
+    title: 'Planning notes',
+    createdAt: Date.UTC(2026, 8, 7),
+    messages: [
+      { role: 'system', content: 'Be concise', uiOnly: true },
+      { role: 'user', content: 'Draft a plan' },
+      { role: 'assistant', content: '- First step' },
+    ],
+  })
+  const incognito = Chat.fromJson({
+    uuid: 'private-chat', temporary: true,
+    messages: [{ role: 'user', content: 'secret' }, { role: 'assistant', content: 'hidden' }],
+  })
+
+  expect(chatAsMarkdown(saved)).toContain('# Planning notes\n\n> Created: 2026-09-07T00:00:00.000Z')
+  expect(chatAsMarkdown(saved)).not.toContain('Be concise')
+  archiveHistoryAsMarkdown('/archive', [saved, incognito])
+
+  expect(fs.mkdirSync).toHaveBeenCalledWith('/archive', { recursive: true })
+  expect(fs.writeFileSync).toHaveBeenCalledWith('/archive/witsy-chat-chat-1.md', expect.stringContaining('## You\n\nDraft a plan'), 'utf-8')
+  expect(fs.writeFileSync).not.toHaveBeenCalledWith('/archive/witsy-chat-private-chat.md', expect.anything(), expect.anything())
 })
 
 test('Extract attachments - invalid', async () => {

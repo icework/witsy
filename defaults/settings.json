@@ -60,6 +60,10 @@
       "fontSize": 3
     }
   },
+  "chatHistory": {
+    "archiveFolder": "",
+    "incognito": false
+  },
   "scratchpad": {
     "engine": "",
     "model": "",

@@ -265,8 +265,8 @@ export const installIpc = (
   });
 
   ipcMain.on(IPC.HISTORY.SAVE, (event, payload) => {
-    const { workspaceId, history: historyData } = JSON.parse(payload);
-    event.returnValue = history.saveHistory(app, workspaceId, historyData as History);
+    const { workspaceId, history: historyData, archiveFolder } = JSON.parse(payload);
+    event.returnValue = history.saveHistory(app, workspaceId, historyData as History, archiveFolder);
   });
 
   ipcMain.on(IPC.COMMANDS.LOAD, (event) => {
