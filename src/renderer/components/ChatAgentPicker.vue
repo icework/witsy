@@ -70,7 +70,7 @@ const receive = (next: ScreenshotState) => {
     if (!retaking) {
       const agent = agents.value.find(a => a.id === next.agentId)
       if (agent) { selected.value = agent.id; emit('select', agent) }
-      temporary.value = agent ? false : props.chat.temporary
+      temporary.value = agent ? store.config.chatHistory?.incognito === true : props.chat.temporary
       question.value = next.prompt ?? (next.contextKind === 'selected-text' ? t('contextWorkflow.defaultTextPrompt') : '')
       contextText.value = next.contextText || ''
     }

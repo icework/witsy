@@ -25,6 +25,17 @@ test('saved Chat Agent settings survive history reload as an independent snapsho
   expect(restored.chatAgent.native.tools).toEqual(['search'])
 })
 
+test.each([true, false, undefined])('chat restoration and forks preserve incognito status (%s)', temporary => {
+  const chat = Chat.fromJson({
+    uuid: 'source-chat', temporary,
+    messages: [{ role: 'user', content: 'A private draft' }, { role: 'assistant', content: 'Draft response' }],
+  })
+  expect(chat.temporary).toBe(temporary === true)
+  const fork = chat.fork(chat.messages[1])
+  expect(fork.temporary).toBe(temporary === true)
+  expect(fork.uuid).not.toBe(chat.uuid)
+})
+
 test('Build from JSON', () => {
   const chat = Chat.fromJson({
     uuid: 'uuid',

@@ -84,6 +84,21 @@ test('background task mode submits with Enter while Shift+Enter remains availabl
   expect(wrapper.emitted('ask')).toHaveLength(1)
 })
 
+test.each(['native', 'hermes'] as const)('a workflow using a saved %s Agent keeps the incognito default when submitted', async kind => {
+  store.config.chatHistory.incognito = true
+  const agent = kind === 'native' ? { id: 'native', name: 'Native', kind: 'native' as const, native: { engine: 'mock', model: 'chat' } } : agents[0]
+  vi.mocked(window.api.chatAgents.list).mockResolvedValue([agent])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValue({ compact: true, capturing: false, busy: false, contextKind: 'selected-text', requestId: 'incognito', contextText: 'Private context', agentId: agent.id, workflowMode: 'task', prompt: 'Summarize privately' })
+  const chat = new Chat(); chat.temporary = true; chat.chatAgent = agent
+  if (agent.kind === 'hermes') chat.runtime = { ...agent.binding }
+  else chat.setEngineModel(agent.native.engine, agent.native.model)
+  const wrapper = mount(ChatAgentPicker, { props: { chat } }); await flushPromises()
+  expect(wrapper.find('select').element.value).toBe(agent.id)
+  expect(wrapper.find<HTMLInputElement>('input[type="checkbox"]').element.checked).toBe(true)
+  await wrapper.findAll('textarea')[1].trigger('keydown', { key: 'Enter' }); await flushPromises()
+  expect(wrapper.emitted('ask')?.[0][0]).toMatchObject({ text: 'Private context', question: 'Summarize privately', temporary: true })
+})
+
 test('manual context controls work without saved Agents or a Workflow', async () => {
   vi.mocked(window.api.chatAgents.list).mockResolvedValue([])
   const wrapper = mount(ChatAgentPicker, { props: { chat: new Chat() } })

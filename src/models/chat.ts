@@ -45,6 +45,7 @@ export default class Chat implements ChatBase {
     chat.uuid = obj.uuid || crypto.randomUUID()
     chat.chatAgent = obj.chatAgent ? JSON.parse(JSON.stringify(obj.chatAgent)) : undefined
     chat.runtime = obj.runtime ? { ...obj.runtime } : undefined
+    chat.temporary = obj.temporary === true
     chat.title = obj.title
     chat.createdAt = obj.createdAt
     chat.lastModified = obj.lastModified || obj.createdAt
