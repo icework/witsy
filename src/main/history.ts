@@ -112,7 +112,7 @@ export const loadHistory = async (app: App, workspaceId: string): Promise<Histor
 
 }
 
-export const saveHistory = (app: App, workspaceId: string, history: History) => {
+export const saveHistory = (app: App, workspaceId: string, history: History, archiveFolder?: string) => {
   try {
 
     // check version
@@ -124,8 +124,49 @@ export const saveHistory = (app: App, workspaceId: string, history: History) => 
     const filepath = historyFilePath(app, workspaceId) 
     fs.writeFileSync(filepath, JSON.stringify(history, null, 2))
 
+    // Keep an optional, human-readable copy outside Witsy's data directory.
+    // Temporary/incognito conversations never reach History and are therefore
+    // intentionally excluded from this archive as well.
+    const destination = archiveFolder?.trim()
+    if (destination) {
+      archiveHistoryAsMarkdown(destination, history.chats)
+    }
+
   } catch (error) {
     console.log('Error saving history data', error)
+  }
+}
+
+const markdownFilename = (chat: Chat): string => {
+  // UUID-based names remain stable when Witsy generates or edits a title.
+  return `witsy-chat-${chat.uuid.replace(/[^a-zA-Z0-9_-]/g, '_')}.md`
+}
+
+export const chatAsMarkdown = (chat: Chat): string => {
+  const roles: Record<string, string> = { assistant: 'Assistant', system: 'System', user: 'You', tool: 'Tool' }
+  let markdown = `# ${chat.title || 'Untitled chat'}\n\n`
+  if (chat.createdAt) markdown += `> Created: ${new Date(chat.createdAt).toISOString()}\n\n`
+  for (const message of chat.messages) {
+    if (message.transient || message.uiOnly) continue
+    markdown += `## ${roles[message.role] || message.role}\n\n${message.content || ''}\n\n`
+  }
+  return markdown
+}
+
+export const archiveHistoryAsMarkdown = (folder: string, chats: Chat[]): void => {
+  fs.mkdirSync(folder, { recursive: true })
+  const filenames = new Set(chats
+    .filter(chat => !chat.temporary && chat.messages.length > 1)
+    .map(markdownFilename))
+  for (const filename of fs.readdirSync(folder)) {
+    if (filename.startsWith('witsy-chat-') && filename.endsWith('.md') && !filenames.has(filename)) {
+      fs.unlinkSync(path.join(folder, filename))
+    }
+  }
+  for (const chat of chats) {
+    if (!chat.temporary && chat.messages.length > 1) {
+      fs.writeFileSync(path.join(folder, markdownFilename(chat)), chatAsMarkdown(chat), 'utf-8')
+    }
   }
 }
 

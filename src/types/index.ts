@@ -442,7 +442,7 @@ declare global {
       }
       history: {
         load(workspaceId: string): History
-        save(workspaceId: string, history: History): void
+        save(workspaceId: string, history: History, archiveFolder?: string): void
       }
       automation: {
         getText(id: string): string

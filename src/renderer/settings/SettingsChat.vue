@@ -18,6 +18,25 @@
           <div v-if="agentsError" role="alert">{{ agentsError }} <button type="button" @click="loadAgents">{{ t('common.retry') }}</button></div>
         </div>
       </section>
+      <section class="history-settings agent-form">
+        <div class="form-section">
+          <div class="section-heading"><h3>{{ t('settings.chat.history.title') }}</h3></div>
+          <p>{{ t('settings.chat.history.help') }}</p>
+          <div class="form-field horizontal">
+            <input id="incognito-mode" type="checkbox" v-model="incognito" @change="save" />
+            <label for="incognito-mode">{{ t('settings.chat.history.incognito') }}</label>
+          </div>
+          <div class="form-field archive-folder">
+            <label for="archive-folder">{{ t('settings.chat.history.archiveFolder') }}</label>
+            <div class="folder-control">
+              <input id="archive-folder" :value="archiveFolder" readonly :placeholder="t('settings.chat.history.notConfigured')" :title="archiveFolder" />
+              <button type="button" @click="chooseArchiveFolder">{{ t('common.browse') }}</button>
+              <button v-if="archiveFolder" type="button" class="secondary" @click="clearArchiveFolder">{{ t('common.clear') }}</button>
+            </div>
+            <div class="help">{{ t('settings.chat.history.archiveHelp') }}</div>
+          </div>
+        </div>
+      </section>
       <div class="form-field layout">
         <label>{{ t('settings.chat.listLayout') }}</label>
         <select v-model="layout" @change="save">
@@ -142,6 +161,8 @@ const copyFormat = ref<TextFormat>('text')
 const sendKey = ref<SendKey>('enter')
 const toolCallsDisplay = ref<ToolCallsDisplay>('summary')
 const layout = ref<ChatListLayout>('normal')
+const archiveFolder = ref('')
+const incognito = ref(false)
 const fonts = ref(window.api.app.listFonts())
 
 const chatTheme = computed(() => store.config.appearance.chat.theme)
@@ -153,6 +174,7 @@ const fontStyle = computed(() => {
 
 const load = () => {
   store.config.prompt.defaultAgentId ??= ''
+  store.config.chatHistory ??= { archiveFolder: '', incognito: false }
   void loadAgents()
   theme.value = store.config.appearance.chat.theme || 'openai'
   layout.value = store.config.appearance.chatList.layout || 'normal'
@@ -162,9 +184,25 @@ const load = () => {
   toolCallsDisplay.value = store.config.appearance.chat.toolCallsDisplay || 'summary'
   fontFamily.value = store.config.appearance.chat.fontFamily || ''
   fontSize.value = store.config.appearance.chat.fontSize || 3
+  archiveFolder.value = store.config.chatHistory.archiveFolder || ''
+  incognito.value = store.config.chatHistory.incognito || false
+}
+
+const chooseArchiveFolder = async () => {
+  const folder = await window.api.file.pickDirectory()
+  if (!folder) return
+  archiveFolder.value = folder
+  save()
+  store.saveHistory()
+}
+
+const clearArchiveFolder = () => {
+  archiveFolder.value = ''
+  save()
 }
 
 const save = () => {
+  store.config.chatHistory ??= { archiveFolder: '', incognito: false }
   store.config.appearance.chat.theme = theme.value
   store.config.appearance.chat.fontFamily = fontFamily.value
   store.config.appearance.chat.fontSize = fontSize.value
@@ -173,6 +211,8 @@ const save = () => {
   store.config.appearance.chat.autoPreview.html = previewHtml.value
   store.config.appearance.chat.toolCallsDisplay = toolCallsDisplay.value
   store.config.appearance.chat.copyFormat = copyFormat.value
+  store.config.chatHistory.archiveFolder = archiveFolder.value
+  store.config.chatHistory.incognito = incognito.value
   store.saveSettings()
 }
 
@@ -182,7 +222,16 @@ defineExpose({ load })
 
 <style scoped>
 
-.quick-chat-settings { margin-bottom: var(--space-12); }
+.quick-chat-settings, .history-settings { margin-bottom: var(--space-12); }
+
+.folder-control { display: flex; gap: var(--space-2); align-items: center; min-width: 0; }
+.folder-control input { flex: 1 1 16rem; min-width: 0; }
+.folder-control button { flex: 0 0 auto; }
+
+@container (max-width: 520px) {
+  .folder-control { flex-wrap: wrap; }
+  .folder-control input { flex-basis: 100%; }
+}
 
 .slider-label.small {
   font-size: 10.5px;

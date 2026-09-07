@@ -19,6 +19,10 @@
       <div class="title" @dblclick="onRenameChat">{{ chat?.title || (compact ? t('quickChat.title') : '\u00a0') }}</div>
       <span class="separator" v-if="chat?.title && chat?.createdAt">&bull;</span>
       <div class="created-at" v-if="chat?.title && chat?.createdAt">{{ t('chat.startedAt', { date: formatDate(chat.createdAt) }) }}</div>
+      <div v-if="chat?.temporary" class="incognito-badge" :title="t('chat.incognito.help')">
+        <EyeOffIcon aria-hidden="true" />
+        <span>{{ t('chat.incognito.label') }}</span>
+      </div>
       <div class="flex-push"></div>
 
       <ButtonIcon class="settings" @click="showModelSettings = !showModelSettings" v-if="!chat?.runtime && store.isFeatureEnabled('chat.settings')">
@@ -129,7 +133,7 @@ import { t } from '@services/i18n'
 import LlmFactory, { ILlmManager } from '@services/llms/llm'
 import { exportToPdf } from '@services/pdf'
 import { kMediaChatId, store } from '@services/store'
-import { MessageCirclePlusIcon, MoreVerticalIcon, PanelRightCloseIcon, PanelRightOpenIcon, SlidersHorizontalIcon, X } from 'lucide-vue-next'
+import { EyeOffIcon, MessageCirclePlusIcon, MoreVerticalIcon, PanelRightCloseIcon, PanelRightOpenIcon, SlidersHorizontalIcon, X } from 'lucide-vue-next'
 import { Expert, Message } from 'types/index'
 import { computed, ComputedRef, inject, ref } from 'vue'
 import ButtonIcon from './ButtonIcon.vue'
@@ -463,6 +467,17 @@ defineExpose({
         white-space: nowrap;
       }
 
+      .incognito-badge {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: var(--space-2);
+        color: var(--dimmed-text-color);
+        font-size: var(--font-size-12);
+
+        svg { width: 0.875rem; height: 0.875rem; }
+      }
+
       .icon {
         &.hidden {
           display: none;
@@ -483,6 +498,10 @@ defineExpose({
         .separator, .created-at {
           display: none;
         }
+      }
+
+      @container (max-width: 420px) {
+        .incognito-badge span { display: none; }
       }
 
     }

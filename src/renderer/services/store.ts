@@ -272,7 +272,12 @@ export const store: Store = reactive({
       }
       
       // save
-      window.api.history.save(store.config.workspaceId, history)
+      const archiveFolder = store.config.chatHistory?.archiveFolder
+      if (archiveFolder) {
+        window.api.history.save(store.config.workspaceId, history, archiveFolder)
+      } else {
+        window.api.history.save(store.config.workspaceId, history)
+      }
   
     } catch (error) {
       console.log('Error saving history data', error)

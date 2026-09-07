@@ -177,6 +177,12 @@ let quickChatDraft: Message | null = null
 let handledQuickChatRequest = ''
 const quickChatLoading = ref(false)
 
+const createChat = () => {
+  const chat = new Chat()
+  chat.temporary = store.config.chatHistory?.incognito === true
+  return chat
+}
+
 // session management helpers
 const createSession = (chat: Chat): ChatSession => {
   const newAssistant = new Assistant(store.config)
@@ -339,7 +345,7 @@ const onNewChat = async (payload?: any) => {
   const { prompt, attachments, submit } = payload || {}
 
   // create a new chat and session
-  const newChat = new Chat()
+  const newChat = createChat()
   const session = setActiveSession(newChat.uuid, newChat)
 
   updateChatEngineModel()
@@ -355,7 +361,7 @@ const onNewChat = async (payload?: any) => {
 }
 
 const onRuntimeBinding = (binding?: RuntimeBinding) => {
-  const chat = new Chat()
+  const chat = createChat()
   chat.runtime = binding
   setActiveSession(chat.uuid, chat)
   if (!binding) updateChatEngineModel()
@@ -380,7 +386,7 @@ const onChatConfiguration = async (config: { runtime?: RuntimeBinding; engine?: 
 }
 
 const onChatAgent = (agent: ChatAgent) => {
-  const chat = new Chat()
+  const chat = createChat()
   chat.chatAgent = JSON.parse(JSON.stringify(agent))
   if (agent.kind === 'native') {
     const config = chat.chatAgent.native
@@ -500,7 +506,7 @@ const onNewChatInFolder = (folderId: string) => {
 
   // get folder and create new chat
   const folder = store.history.folders.find((f) => f.id === folderId)
-  const chat = new Chat()
+  const chat = createChat()
 
   // create session for this chat
   setActiveSession(chat.uuid, chat)
@@ -936,7 +942,7 @@ const onRunAgent = async (agentId?: string) => {
   builder.value.show(agent.value, {}, async (values: Record<string, string>) => {
 
     // we need a new chat and session
-    const newChat = new Chat()
+    const newChat = createChat()
     setActiveSession(newChat.uuid, newChat)
     updateChatEngineModel()
 

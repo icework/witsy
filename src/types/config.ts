@@ -17,6 +17,7 @@ export type Configuration = {
   instructions: InstructionsConfig
   deepresearch: DeepResearchConfig
   appearance: AppearanceConfig
+  chatHistory: ChatHistoryConfig
   studio: DesignStudioConfig
   shortcuts: ShortcutsConfig
   scratchpad: ScratchpadConfig
@@ -31,6 +32,11 @@ export type Configuration = {
   mcpServers: Record<string, McpClaudeServer>
   features?: Record<string, any>
   migrations?: string[]
+}
+
+export type ChatHistoryConfig = {
+  archiveFolder: string
+  incognito: boolean
 }
 
 export type WitsyEngineCreateOpts = EngineCreateOpts & {
