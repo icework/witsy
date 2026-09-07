@@ -2593,6 +2593,14 @@
     "openChat": "Open in chat",
     "addText": "Add text context"
   },
+  "runtimeDefaults": {
+    "title": "Default provider & model",
+    "help": "Used when you select this connection in chat or set up a new agent. Choose Runtime default to let the connected runtime decide.",
+    "save": "Save default model",
+    "saved": "Default model saved. New selections of this connection will use it.",
+    "newChat": "Start a conversation",
+    "newChatHelp": "Uses the saved default model. You can change it in the chat box."
+  },
   "chatAgent": {
     "label": "Chat Agent",
     "custom": "Manual chat / connection",
@@ -2619,6 +2627,9 @@
     "toolsHelp": "Use none for no tools, * for all enabled tools, or comma-separated tool IDs.",
     "saveAs": "New agent / Save as",
     "connectionHelp": "Add a runtime connection in Settings → Connections, then return here.",
+    "profileFromConnection": "Hermes profile: {profile} · Set by the selected connection.",
+    "connectionUnavailable": "Connection unavailable",
+    "selectConnection": "Choose an available runtime connection.",
     "preview": "Screenshot preview",
     "previewHelp": "Review the screenshot and chat settings before sending. You can choose an agent or configure this chat manually.",
     "question": "Question about this screenshot",
@@ -2649,5 +2660,18 @@
     "contextTitle": "Review context",
     "runtimeHelp": "Replies and session history are managed by the connected runtime.",
     "addContext": "Add context"
+  },
+  "nativeModels": {
+    "credentials": "Provider credentials",
+    "credentialHelp": "Configure credentials and connection details for this provider.",
+    "credentialsSaved": "Credentials saved. Your model preferences are unchanged.",
+    "manage": "Configure Native models",
+    "manageHelp": "Choose visible providers, visible models and the default model in Connections → Native.",
+    "help": "Only configured providers appear here. Refresh the catalog to load their models.",
+    "defaultHelp": "Used when you select Native in chat or create a Native agent. Automatic uses an available visible model.",
+    "automatic": "Automatic",
+    "unconfigured": "No configured providers. Add provider credentials in Models to get started.",
+    "refreshFailed": "Could not refresh: {providers}. Previously loaded models are kept.",
+    "unnamed": "Unnamed provider"
   }
 }

@@ -1,4 +1,5 @@
 export type RuntimeKind = 'hermes' | 'opencode'
+export interface RuntimeModelSelection { provider: string; model: string }
 // Omitted lists mean all available entries. Empty lists deliberately show none.
 export interface RuntimeModelVisibility {
   providers?: string[]
@@ -11,6 +12,8 @@ export interface RuntimeConnection {
   kind: RuntimeKind
   endpoint: string
   defaultProfile?: string
+  defaultProvider?: string
+  defaultModel?: string
   hasSecret?: boolean
   modelVisibility?: RuntimeModelVisibility
 }
@@ -53,6 +56,7 @@ export interface RuntimeAPI {
   save(connection: RuntimeConnection, secret?: string, localProfile?: string): Promise<RuntimeConnection>
   catalog(binding: RuntimeBinding, options?: RuntimeCatalogOptions): Promise<RuntimeCatalog>
   setModelVisibility(connectionId: string, visibility: RuntimeModelVisibility): Promise<RuntimeConnection>
+  setDefaultModel(connectionId: string, selection: RuntimeModelSelection | null): Promise<RuntimeConnection>
   start(chatId: string, binding: RuntimeBinding, text: string, images?: string[]): Promise<RuntimeRun>
   get(chatId: string): Promise<RuntimeRun | null>
   cancel(chatId: string): Promise<void>

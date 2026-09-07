@@ -132,6 +132,7 @@ onMounted(async () => {
   watch(() => props.extra, (params) => {
     if (params?.initialTab) {
       showTab(params.initialTab)
+      if (params.initialTab === 'runtimeconnections' && params.native) settingsRuntimeConnections.value?.load({ native: true })
       if (params.initialTab === 'models' && params.engine) {
         settingsModels.value?.load({ engine: params.engine })
       }
@@ -181,7 +182,7 @@ const onShow = (payload?: OpenSettingsPayload) => {
 
   // show initial tab if specified
   if (payload?.initialTab) {
-    nextTick(() => showTab(payload.initialTab))
+    nextTick(() => { showTab(payload.initialTab); if (payload.initialTab === 'runtimeconnections' && payload.native) settingsRuntimeConnections.value?.load({ native: true }) })
   }
 
   // notify active tab it's visible

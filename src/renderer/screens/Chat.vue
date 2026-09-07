@@ -47,6 +47,7 @@ import { t } from '@services/i18n'
 import LlmUtils from '@services/llm_utils'
 import LlmFactory from '@services/llms/llm'
 import { store } from '@services/store'
+import { nativeDefault } from '@services/native_models'
 import { LlmChunk, LlmChunkContent } from 'multi-llm-ts'
 import { A2APromptOpts, Agent } from 'types/agents'
 import { strDict } from 'types/index'
@@ -539,7 +540,7 @@ const onNewChatInFolder = (folderId: string) => {
 
 const updateChatEngineModel = () => {
   if (!assistant.value.chat.hasMessages() && !assistant.value.chat.runtime && !assistant.value.chat.chatAgent) {
-    const { engine, model } = llmManager.getChatEngineModel()
+    const { engine, model } = nativeDefault(store.config, llmManager)
     assistant.value.chat.setEngineModel(engine, model)
     store.initChatWithDefaults(assistant.value.chat)
   }

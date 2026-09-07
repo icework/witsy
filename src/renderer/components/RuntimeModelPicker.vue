@@ -4,7 +4,7 @@
       <GlobeIcon v-if="compact" aria-hidden="true" /><span v-else>{{ t('chatAgent.provider') }}</span>
       <select :aria-label="t('chatAgent.provider')" :value="providerValue" :disabled="disabled || loading || !!error" @change="chooseProvider">
         <option v-if="missingProvider" value="unavailable" disabled>{{ pendingLabel }}</option>
-        <option value="">{{ t('runtime.inherit') }}</option>
+        <option value="">{{ defaultLabel || t('runtime.inherit') }}</option>
         <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
       </select>
       <ChevronDownIcon v-if="compact" class="chevron" aria-hidden="true" />
@@ -13,7 +13,7 @@
       <BoxIcon v-if="compact" aria-hidden="true" /><span v-else>{{ t('runtime.model') }}</span>
       <select :aria-label="t('runtime.model')" :value="modelValue" :disabled="disabled || loading || !!error || missingProvider || !models.length" @change="chooseModel">
         <option v-if="missingModel" value="unavailable" disabled>{{ pendingLabel }}</option>
-        <option value="">{{ effectiveProvider && !models.length && !loading ? t('runtimeModels.noVisibleModels') : t('runtime.inherit') }}</option>
+        <option value="">{{ effectiveProvider && !models.length && !loading ? t('runtimeModels.noVisibleModels') : defaultLabel || t('runtime.inherit') }}</option>
         <option v-for="model in models" :key="model.id" :value="model.id">{{ model.name }}</option>
       </select>
       <ChevronDownIcon v-if="compact" class="chevron" aria-hidden="true" />
@@ -27,7 +27,7 @@ import { computed } from 'vue'
 import { BoxIcon, ChevronDownIcon, GlobeIcon } from 'lucide-vue-next'
 import { t } from '@services/i18n'
 import { RuntimeBinding, RuntimeCatalog } from '../../types/runtime'
-const props = defineProps<{ binding: RuntimeBinding; catalog: RuntimeCatalog; loading?: boolean; error?: string; disabled?: boolean; compact?: boolean }>()
+const props = defineProps<{ binding: Pick<RuntimeBinding, 'provider' | 'model'>; defaultLabel?: string; catalog: RuntimeCatalog; loading?: boolean; error?: string; disabled?: boolean; compact?: boolean }>()
 const emit = defineEmits<{ change: [choice: { provider?: string; model?: string }]; refresh: [] }>()
 const providers = computed(() => (props.catalog.providers || [...new Set(props.catalog.models.map(model => model.provider))].map(id => ({ id, name: id }))).filter(p => props.catalog.models.some(m => m.provider === p.id)))
 const currentProvider = computed(() => props.binding.provider || '')
@@ -38,8 +38,8 @@ const missingModel = computed(() => !!props.binding.model && !models.value.some(
 const providerValue = computed(() => missingProvider.value ? 'unavailable' : currentProvider.value)
 const modelValue = computed(() => missingModel.value ? 'unavailable' : props.binding.model || '')
 const pendingLabel = computed(() => props.loading ? t('runtimeModels.loading') : props.error ? t('runtimeModels.loadFailed') : t('runtimeModels.unavailable'))
-const providerTitle = computed(() => props.error || (missingProvider.value ? pendingLabel.value : providers.value.find(p => p.id === currentProvider.value)?.name || t('runtime.inherit')))
-const modelTitle = computed(() => props.error || (missingModel.value ? pendingLabel.value : models.value.find(m => m.id === props.binding.model)?.name || t('runtime.inherit')))
+const providerTitle = computed(() => props.error || (missingProvider.value ? pendingLabel.value : providers.value.find(p => p.id === currentProvider.value)?.name || props.defaultLabel || t('runtime.inherit')))
+const modelTitle = computed(() => props.error || (missingModel.value ? pendingLabel.value : models.value.find(m => m.id === props.binding.model)?.name || props.defaultLabel || t('runtime.inherit')))
 const chooseProvider = (event: Event) => {
   const provider = (event.target as HTMLSelectElement).value
   if (provider && !providers.value.some(p => p.id === provider)) return

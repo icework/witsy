@@ -105,6 +105,11 @@ export const installIpc = (
     return saved
   })
   ipcMain.handle(IPC.RUNTIME.CATALOG, (_event, binding, options) => runtimes.catalog(binding, options))
+  ipcMain.handle(IPC.RUNTIME.MODEL_DEFAULT, async (_event, connectionId, selection) => {
+    const saved = await runtimes.setDefaultModel(connectionId, selection)
+    window.emitIpcEventToAll('runtime-connections-changed')
+    return saved
+  })
   ipcMain.handle(IPC.RUNTIME.START, (event, chatId, binding, text, images) => runtimes.start(event.sender.id, chatId, binding, text, run => {
     if (event.sender.isDestroyed()) return
     const target = BrowserWindow.fromWebContents(event.sender)

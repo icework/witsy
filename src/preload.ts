@@ -1,5 +1,5 @@
 import { ChatAgent, ContextWorkflow, ScreenshotSettings } from './types/chat_agent'
-import { RuntimeBinding, RuntimeCatalogOptions, RuntimeConnection, RuntimeModelVisibility } from './types/runtime'
+import { RuntimeBinding, RuntimeCatalogOptions, RuntimeConnection, RuntimeModelSelection, RuntimeModelVisibility } from './types/runtime'
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld(
       save: (connection: RuntimeConnection, secret?: string, localProfile?: string) => ipcRenderer.invoke(IPC.RUNTIME.SAVE, connection, secret, localProfile),
       catalog: (binding: RuntimeBinding, options?: RuntimeCatalogOptions) => ipcRenderer.invoke(IPC.RUNTIME.CATALOG, binding, options),
       setModelVisibility: (connectionId: string, visibility: RuntimeModelVisibility) => ipcRenderer.invoke(IPC.RUNTIME.MODEL_VISIBILITY, connectionId, visibility),
+      setDefaultModel: (connectionId: string, selection: RuntimeModelSelection | null) => ipcRenderer.invoke(IPC.RUNTIME.MODEL_DEFAULT, connectionId, selection),
       start: (chatId: string, binding: RuntimeBinding, text: string, images?: string[]) => ipcRenderer.invoke(IPC.RUNTIME.START, chatId, binding, text, images),
       get: (chatId: string) => ipcRenderer.invoke(IPC.RUNTIME.GET, chatId),
       cancel: (chatId: string) => ipcRenderer.invoke(IPC.RUNTIME.CANCEL, chatId),

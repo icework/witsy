@@ -21,6 +21,26 @@ test('native Provider and Model can change independently of saved Agent defaults
   await selects[0].setValue('h')
   expect(wrapper.emitted('change')?.[1][0]).toEqual({ runtime: { kind: 'hermes', connectionId: 'h', profile: 'research' } })
 })
+test.each(['hermes', 'opencode'] as const)('selecting %s immediately uses that connection default without carrying prior session settings', async kind => {
+  const connection = { id: 'h', kind, name: 'Configured runtime', endpoint: 'http://localhost:8642', defaultProfile: 'research', defaultProvider: 'p', defaultModel: 'm' }
+  vi.mocked(window.api.runtime.list).mockResolvedValue([connection])
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: [], agents: [], models: [{ provider: 'p', id: 'm', name: 'Model' }] })
+  const chat = new Chat(); chat.runtime = { kind: 'opencode', connectionId: 'old', provider: 'old', model: 'old', agent: 'old-agent', directory: '/old', sessionId: 'old-session' }
+  const wrapper = mount(ChatConfiguration, { props: { chat } }); await flushPromises()
+  await wrapper.find('select').setValue('h')
+  const next = (wrapper.emitted('change')![0][0] as { runtime: typeof chat.runtime }).runtime
+  expect(next).toEqual({ kind, connectionId: 'h', provider: 'p', model: 'm', ...(kind === 'hermes' ? { profile: 'research' } : {}) })
+  const nextChat = new Chat(); nextChat.runtime = next
+  await wrapper.setProps({ chat: nextChat }); await flushPromises()
+  expect(wrapper.findAll('select').map(s => s.element.value)).toEqual(['h', 'p', 'm'])
+  expect(chat.runtime.sessionId).toBe('old-session')
+  vi.mocked(window.api.runtime.list).mockResolvedValue([{ ...connection, defaultModel: 'changed' }])
+  for (const [signal, listener] of vi.mocked(window.api._on).mock.calls) if (signal === 'runtime-connections-changed') listener(null)
+  await flushPromises()
+  expect(nextChat.runtime.model).toBe('m')
+  await wrapper.find('select').setValue('h')
+  expect(wrapper.emitted('change')?.at(-1)?.[0]).toMatchObject({ runtime: { model: 'changed' } })
+})
 test.each(['hermes', 'opencode'] as const)('%s offers the visible catalog and clears session metadata when selecting another model', async kind => {
   vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: [], agents: [], providers: [{ id: 'p', name: 'Provider' }], models: [{ provider: 'p', id: 'm', name: 'M' }, { provider: 'p', id: 'next', name: 'Next' }] })
   const chat = new Chat(); chat.runtime = { kind, connectionId: 'h', provider: 'p', model: 'm', actualModel: 'old', actualProvider: 'old-provider', sessionId: 'existing-session' }

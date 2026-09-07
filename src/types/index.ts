@@ -317,6 +317,7 @@ export interface MediaCreator {
 export type DesignStudioMediaType = 'image' | 'video' | 'imageEdit' | 'videoEdit'
 
 export type OpenSettingsPayload = {
+  native?: boolean
   initialTab?: string
   engine?: string
 }

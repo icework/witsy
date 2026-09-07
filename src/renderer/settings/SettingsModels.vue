@@ -1,24 +1,27 @@
 <template>
-  <div class="tab-content">
+  <div class="tab-content agent-settings">
     <header>
       <div class="title">{{ t('settings.tabs.models') }}</div>
-      <Trash2Icon class="icon delete" @click="onDeleteCustom" v-if="isCustom" />
+      <button type="button" class="danger" :aria-label="t('common.delete')" @click="onDeleteCustom" v-if="isCustom"><Trash2Icon /></button>
     </header>
     <main>
       <div class="master-detail">
         <div class="md-master">
           <div class="md-master-list">
-            <div class="md-master-list-item" @click="showCreateCustom()">
+            <button type="button" class="md-master-list-item" @click="showCreateCustom()">
               <CirclePlusIcon class="logo create" />
               {{ t('settings.engines.custom.create') }}
-            </div>
-            <div class="md-master-list-item" v-for="engine in engines" :key="engine.id" :class="{ selected: currentEngine == engine.id }" @click="selectEngine(engine)">
+            </button>
+            <button type="button" class="md-master-list-item" v-for="engine in engines" :key="engine.id" :class="{ selected: currentEngine == engine.id }" :aria-pressed="currentEngine === engine.id" :title="engine.label" @click="selectEngine(engine)">
               <EngineLogo :engine="engine.id" :grayscale="true" />
-              {{ engine.label }}
-            </div>
+              <span><strong>{{ engine.label }}</strong></span>
+            </button>
           </div>
         </div>
-        <component :is="currentView" class="md-detail" ref="engineSettings" :engine="currentEngine" @createCustom="showCreateCustom"/>
+        <div class="md-detail">
+          <SettingsAzure v-if="currentEngine === 'azure'" ref="engineSettings" @createCustom="showCreateCustom" />
+          <ProviderCredentials v-else ref="engineSettings" :engine="currentEngine" :name="engines.find(e => e.id === currentEngine)?.label || currentEngine" />
+        </div>
       </div>
       <CreateEngine ref="createEngine" @create="onCreateCustom" />
     </main>
@@ -36,20 +39,10 @@ import CreateEngine from '@screens/CreateEngine.vue'
 import { t } from '@services/i18n'
 import { store } from '@services/store'
 import { CustomEngineConfig } from 'types/config'
-import SettingsAnthropic from './SettingsAnthropic.vue'
+import '../../../css/agent-forms.css'
+import '../../../css/agent-settings.css'
+import ProviderCredentials from '@components/ProviderCredentials.vue'
 import SettingsAzure from './SettingsAzure.vue'
-import SettingsCerebras from './SettingsCerebras.vue'
-import SettingsCustomLLM from './SettingsCustomLLM.vue'
-import SettingsDeepSeek from './SettingsDeepSeek.vue'
-import SettingsGoogle from './SettingsGoogle.vue'
-import SettingsGroq from './SettingsGroq.vue'
-import SettingsLMStudio from './SettingsLMStudio.vue'
-import SettingsMeta from './SettingsMeta.vue'
-import SettingsMistralAI from './SettingsMistralAI.vue'
-import SettingsOllama from './SettingsOllama.vue'
-import SettingsOpenAI from './SettingsOpenAI.vue'
-import SettingsOpenRouter from './SettingsOpenRouter.vue'
-import SettingsXAI from './SettingsXAI.vue'
 
 type Engine = {
   id: string,
@@ -69,7 +62,7 @@ const engines = computed(() => {
     if (llmManager.isCustomEngine(id)) {
       return {
         id: id,
-        label: (store.config.engines[id] as CustomEngineConfig).label
+        label: (store.config.engines[id] as CustomEngineConfig).label || t('nativeModels.unnamed')
       }
     } else {
       return {
@@ -104,23 +97,6 @@ const engines = computed(() => {
   return engines
 })
 
-const currentView = computed(() => {
-  if (currentEngine.value == 'anthropic') return SettingsAnthropic
-  if (currentEngine.value == 'azure') return SettingsAzure
-  if (currentEngine.value == 'cerebras') return SettingsCerebras
-  if (currentEngine.value == 'deepseek') return SettingsDeepSeek
-  if (currentEngine.value == 'google') return SettingsGoogle
-  if (currentEngine.value == 'groq') return SettingsGroq
-  if (currentEngine.value == 'lmstudio') return SettingsLMStudio
-  if (currentEngine.value == 'meta') return SettingsMeta
-  if (currentEngine.value == 'mistralai') return SettingsMistralAI
-  if (currentEngine.value == 'ollama') return SettingsOllama
-  if (currentEngine.value == 'openai') return SettingsOpenAI
-  if (currentEngine.value == 'openrouter') return SettingsOpenRouter
-  if (currentEngine.value == 'xai') return SettingsXAI
-  return SettingsCustomLLM
-})
-
 const selectEngine = (engine: Engine) => {
   currentEngine.value = engine.id
   nextTick(() => engineSettings.value.load())
@@ -144,7 +120,7 @@ const onCreateCustom = (payload: { label: string, api: string, baseURL: string, 
   }
   store.saveSettings()
   selectEngine({ id: uuid } as Engine)
-  nextTick(() => engineSettings.value.loadModels())
+
 }
 
 const onDeleteCustom = () => {
@@ -177,3 +153,8 @@ const save = () => {
 defineExpose({ load })
 
 </script>
+
+<style scoped>
+header button { padding: var(--space-4); }
+header button svg { width: var(--icon-md); height: var(--icon-md); }
+</style>

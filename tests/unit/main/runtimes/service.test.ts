@@ -49,6 +49,36 @@ test('visibility survives service restart and connection edits without replacing
   expect(fs.readFileSync(path.join(state.home, 'runtime-connections.json'), 'utf8')).toBe(before)
 })
 
+test.each(['hermes', 'opencode'] as const)('%s defaults persist independently of credentials, visibility and stale connection edits', async kind => {
+  const c = { ...connection, kind, defaultProfile: kind === 'hermes' ? 'research' : undefined }
+  service.save(c, 'test-secret')
+  const fetch = vi.fn(async (address: string) => {
+    if (kind === 'hermes') {
+      expect(new URL(address).pathname).toContain('/p/research/')
+      return Response.json({ providers: [{ slug: 'p', authenticated: true, models: ['m1', 'm2'] }] })
+    }
+    if (new URL(address).pathname === '/agent') return Response.json([])
+    return Response.json({ connected: ['p'], all: [{ id: 'p', models: { m1: { id: 'm1' }, m2: { id: 'm2' } } }] })
+  })
+  vi.stubGlobal('fetch', fetch)
+  const saved = await service.setDefaultModel('h', { provider: 'p', model: 'm2' })
+  expect(saved).toMatchObject({ defaultProvider: 'p', defaultModel: 'm2', hasSecret: true })
+  service.setModelVisibility('h', { models: { p: ['m2'] } })
+  service = new RuntimeService()
+  service.save({ ...c, name: 'Renamed', defaultProvider: 'stale', defaultModel: 'stale' })
+  expect(service.list()[0]).toMatchObject({ defaultProvider: 'p', defaultModel: 'm2', modelVisibility: { models: { p: ['m2'] } }, hasSecret: true })
+  const file = path.join(state.home, 'runtime-connections.json')
+  const before = fs.readFileSync(file, 'utf8')
+  await expect(service.setDefaultModel('h', { provider: 'p', model: 'm1' })).rejects.toThrow('visible model')
+  await expect(service.setDefaultModel('h', { provider: 'p', model: '' })).rejects.toThrow('provider and model')
+  expect(fs.readFileSync(file, 'utf8')).toBe(before)
+  fetch.mockRejectedValue(new Error('Offline'))
+  await service.setDefaultModel('h', null)
+  expect(service.list()[0].defaultModel).toBeUndefined()
+  expect(service.list()[0].defaultProvider).toBeUndefined()
+  expect(service.list()[0].hasSecret).toBe(true)
+})
+
 test('OpenCode only offers connected providers and respects per-provider model selections', async () => {
   service.save({ id: 'o', name: 'OpenCode', kind: 'opencode', endpoint: 'http://localhost:4096' })
   vi.stubGlobal('fetch', vi.fn(async (address: string) => {

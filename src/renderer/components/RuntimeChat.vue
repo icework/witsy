@@ -30,20 +30,22 @@
       </div>
       <p>{{ t('runtime.credentials') }}</p>
     </form>
+    <NativeConnectionSettings v-if="configuration && !selected && !editing" />
     <button class="native-start" v-if="configuration && !selected" @click="emit('bind')">{{ t('chatAgent.startNative') }}</button>
     <template v-if="selected">
+      <RuntimeConnectionDefaults v-if="configuration && connection && !editing" :key="connection.id" :connection="connection" @saved="connectionUpdated" />
       <RuntimeModelVisibility v-if="configuration && connection && !editing" :key="connection.id" :connection="connection" :binding="target" @saved="visibilitySaved" />
       <section v-if="configuration" class="form-section">
-      <h3>{{ t('agentDesign.sessionDefaults') }}</h3>
+      <h3>{{ t('runtimeDefaults.newChat') }}</h3>
+      <p>{{ t('runtimeDefaults.newChatHelp') }}</p>
+      <p v-if="connection?.kind === 'hermes'">{{ t('chatAgent.profileFromConnection', { profile: target.profile || 'default' }) }}</p>
       <div class="runtime-row">
-        <label v-if="connection?.kind === 'hermes'">{{ t('runtime.profile') }}<input v-model.lazy="target.profile" list="runtime-profiles" :disabled="busy" placeholder="default" /></label>
-        <datalist id="runtime-profiles"><option v-for="profile in catalog.profiles" :key="profile" :value="profile" /></datalist>
-        <label v-if="connection?.kind === 'opencode'">{{ t('runtime.agent') }}<select v-model="target.agent" :disabled="busy"><option value="">{{ t('runtime.inherit') }}</option><option v-for="agent in catalog.agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
+        <label v-if="connection?.kind === 'opencode'">{{ t('runtime.agent') }}<select :value="target.agent || ''" @change="target.agent = ($event.target as HTMLSelectElement).value || undefined" :disabled="busy"><option value="">{{ t('runtime.inherit') }}</option><option v-for="agent in catalog.agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
         <label v-if="connection?.kind === 'opencode'">{{ t('runtime.directory') }}<input v-model.lazy="target.directory" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
 
         <button @click="loadCatalog" :disabled="loading || busy">{{ t('runtime.check') }}</button>
       </div>
-      <RuntimeModelPicker :binding="target" :catalog="catalog" :loading="catalogLoading" :error="catalogError" :disabled="busy" @change="chooseModel" @refresh="reloadCatalog(true)" />
+      <p v-if="catalogError" role="alert">{{ catalogError }}</p>
       <p v-if="connection?.kind === 'hermes'">{{ t('runtime.hermesDirectory') }}</p>
       <div class="form-actions"><button class="primary" @click="applyTarget" :disabled="busy || loading">{{ t('runtime.useTarget') }}</button></div>
       </section>
@@ -89,7 +91,9 @@ import useIpcListener from '@composables/ipc_listener'
 import useEventBus from '@composables/event_bus'
 import { RuntimeBinding, RuntimeConnection, RuntimeRun } from '../../types/runtime'
 import useRuntimeCatalog from '@composables/runtime_catalog'
-import RuntimeModelPicker from './RuntimeModelPicker.vue'
+import { connectionBinding } from '@services/runtime_defaults'
+import RuntimeConnectionDefaults from './RuntimeConnectionDefaults.vue'
+import NativeConnectionSettings from './NativeConnectionSettings.vue'
 import RuntimeModelVisibility from './RuntimeModelVisibility.vue'
 
 const props = defineProps<{ chat: Chat; screenshotPending?: boolean; configuration?: boolean; contextDisabled?: boolean }>()
@@ -107,10 +111,14 @@ const showContextMenu = ref(false)
 const secret = ref('')
 const draft = ref<RuntimeConnection>({ id: '', kind: 'hermes', name: 'Hermes', endpoint: 'http://127.0.0.1:8642' })
 const target = ref<RuntimeBinding>({ connectionId: '', kind: 'hermes', profile: 'default' })
-const { catalog, loading: catalogLoading, error: catalogError, reload: reloadCatalog } = useRuntimeCatalog(() => props.configuration ? target.value : undefined)
+const { catalog, error: catalogError, reload: reloadCatalog } = useRuntimeCatalog(() => props.configuration ? target.value : undefined)
 const run = ref<RuntimeRun | null>(null)
 const tracked = new Map<string, { chat: Chat; message: Message; runId?: string }>()
 const connection = computed(() => connections.value.find(c => c.id === selected.value))
+watch(() => connection.value, current => {
+  if (!props.configuration || !current || target.value.connectionId !== current.id) return
+  target.value = { ...target.value, profile: current.kind === 'hermes' ? current.defaultProfile || 'default' : undefined, provider: current.defaultProvider, model: current.defaultModel }
+})
 const busy = computed(() => !!run.value && !['completed', 'failed', 'cancelled'].includes(run.value.status))
 const targetDirty = computed(() => {
   const b = props.chat.runtime
@@ -182,7 +190,7 @@ const selectConnection = () => {
   error.value = ''; notice.value = ''
   if (!connection.value) return
   draft.value = { ...connection.value }; secret.value = ''
-  target.value = { connectionId: selected.value, kind: connection.value.kind, ...(connection.value.kind === 'hermes' ? { profile: connection.value.defaultProfile || 'default' } : {}) }
+  target.value = connectionBinding(connection.value)
 }
 const saveConnection = (local = false) => attempt(async () => {
   const saved = await window.api.runtime.save({ ...draft.value }, secret.value || undefined, local ? draft.value.defaultProfile || 'default' : undefined)
@@ -195,11 +203,9 @@ const loadCatalog = () => attempt(async () => {
   await reloadCatalog(true)
   if (!catalogError.value) notice.value = t('runtime.connected')
 })
-const chooseModel = (choice: { provider?: string; model?: string }) => {
-  target.value = { ...target.value, ...choice }
-}
+const connectionUpdated = (saved: RuntimeConnection) => { connections.value = connections.value.map(c => c.id === saved.id ? saved : c) }
 const visibilitySaved = (saved: RuntimeConnection) => {
-  connections.value = connections.value.map(c => c.id === saved.id ? saved : c)
+  connectionUpdated(saved)
   void reloadCatalog()
 }
 const applyTarget = () => attempt(async () => {
@@ -239,7 +245,7 @@ const sendMessage = async (input?: string, images: string[] = []) => {
   catch (e) { chat.lastMessage().transient = false; chat.lastMessage().setText(t('runtime.notSubmitted')); if (props.chat.uuid === chat.uuid) run.value = null; persist(chat); throw e }
 }
 const send = () => attempt(() => sendMessage())
-defineExpose({ sendMessage, getPrompt: () => prompt.value, focus: () => input.value?.focus(), setPrompt: (text: string) => { prompt.value = text } })
+defineExpose({ configureNative: () => { if (props.configuration) { selected.value = ''; editing.value = false } }, sendMessage, getPrompt: () => prompt.value, focus: () => input.value?.focus(), setPrompt: (text: string) => { prompt.value = text } })
 const cancel = () => attempt(async () => { await window.api.runtime.cancel(props.chat.uuid) })
 const approve = (choice: string) => attempt(async () => { if (run.value?.approval) await window.api.runtime.approve(props.chat.uuid, run.value.approval.id, choice) })
 </script>

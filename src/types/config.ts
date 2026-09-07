@@ -4,11 +4,13 @@ import { CustomInstruction, DesignStudioMediaType, Shortcut, strDict, TTSVoice }
 import { PluginConfig } from '../renderer/services/plugins/plugin'
 import { McpClaudeServer, McpServer, McpServerState, McpOAuthConfig } from './mcp'
 import { ToolSelection } from './llm'
+import { RuntimeModelVisibility } from './runtime'
 
 export type Configuration = {
   workspaceId: string
   general: GeneralConfig
   llm: LLMConfig
+  nativeRuntime?: { defaultProvider?: string; defaultModel?: string; modelVisibility?: RuntimeModelVisibility }
   prompt: PromptConfig
   commands: CommandsConfig
   automation: AutomationConfig

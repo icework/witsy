@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { RuntimeBinding, RuntimeCatalog, RuntimeCatalogOptions, RuntimeConnection, RuntimeModelVisibility, RuntimeRun } from '../../types/runtime'
+import { RuntimeBinding, RuntimeCatalog, RuntimeCatalogOptions, RuntimeConnection, RuntimeModelSelection, RuntimeModelVisibility, RuntimeRun } from '../../types/runtime'
 import { consumeSSE, runtimeURL, terminalRun } from './protocol'
 import { hermesCatalog, normalizeVisibility, opencodeCatalog, visibleCatalog } from './catalog'
 
@@ -39,6 +39,10 @@ export class RuntimeService {
     const next: SavedConnection = { id: input.id || crypto.randomUUID(), name: input.name.trim() || input.kind, kind: input.kind, endpoint: input.endpoint.replace(/\/$/, ''), defaultProfile: input.kind === 'hermes' ? input.defaultProfile || 'default' : undefined }
     // Connection edits and stale renderer drafts must not overwrite visibility preferences.
     if (previous?.modelVisibility) next.modelVisibility = previous.modelVisibility
+    if (previous?.defaultProvider && previous.defaultModel) {
+      next.defaultProvider = previous.defaultProvider
+      next.defaultModel = previous.defaultModel
+    }
     // Never carry credentials to an edited endpoint automatically.
     if (previous?.endpoint === next.endpoint && previous.kind === next.kind) next.encryptedSecret = previous.encryptedSecret
     if (secret) {
@@ -57,6 +61,26 @@ export class RuntimeService {
     const connection = connections.find(c => c.id === connectionId)
     if (!connection) throw new Error('Runtime connection is missing.')
     connection.modelVisibility = normalizeVisibility(visibility)
+    fs.writeFileSync(this.file(), JSON.stringify(connections, null, 2), { mode: 0o600 })
+    return this.list().find(c => c.id === connectionId)!
+  }
+  async setDefaultModel(connectionId: string, selection: RuntimeModelSelection | null): Promise<RuntimeConnection> {
+    const before = this.connections().find(c => c.id === connectionId)
+    if (!before) throw new Error('Runtime connection is missing.')
+    let catalog: RuntimeCatalog | undefined
+    let choice: RuntimeModelSelection | undefined
+    if (selection !== null) {
+      if (typeof selection?.provider !== 'string' || !selection.provider.trim() || typeof selection?.model !== 'string' || !selection.model.trim()) throw new Error('Choose a default provider and model.')
+      choice = { provider: selection.provider.trim(), model: selection.model.trim() }
+      catalog = await this.catalog({ connectionId, kind: before.kind, profile: before.defaultProfile })
+    }
+    // Re-read after catalog loading so unrelated connection edits are preserved.
+    const connections = this.connections()
+    const current = connections.find(c => c.id === connectionId)
+    if (!current || current.kind !== before.kind || current.endpoint !== before.endpoint || current.defaultProfile !== before.defaultProfile) throw new Error('The connection changed. Try saving the default model again.')
+    if (choice && !visibleCatalog(catalog!, current.modelVisibility).models.some(m => m.provider === choice.provider && m.id === choice.model)) throw new Error('Choose a visible model available through this connection.')
+    if (choice) { current.defaultProvider = choice.provider; current.defaultModel = choice.model }
+    else { delete current.defaultProvider; delete current.defaultModel }
     fs.writeFileSync(this.file(), JSON.stringify(connections, null, 2), { mode: 0o600 })
     return this.list().find(c => c.id === connectionId)!
   }

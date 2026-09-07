@@ -15,11 +15,17 @@ test('connects to a selected OpenCode agent and emits a new binding without a re
   await wrapper.find('select').setValue('o')
   await flushPromises()
   const agent = wrapper.findAll('select').find(s => s.text().includes('build'))!
+  expect(agent.element.selectedOptions[0].textContent).toBe('runtime.inherit')
   await agent.setValue('plan')
   await wrapper.findAll('button').find(b => b.text() === 'runtime.useTarget')!.trigger('click')
   await flushPromises()
   expect(wrapper.emitted('bind')?.[0][0]).toMatchObject({ connectionId: 'o', agent: 'plan', kind: 'opencode' })
   expect((wrapper.emitted('bind')?.[0][0] as any).sessionId).toBeUndefined()
+  await agent.setValue('')
+  await wrapper.findAll('button').find(b => b.text() === 'runtime.useTarget')!.trigger('click')
+  await flushPromises()
+  expect((wrapper.emitted('bind')?.[1][0] as any).agent).toBeUndefined()
+  expect(agent.element.selectedOptions[0].textContent).toBe('runtime.inherit')
 })
 test('sends through runtime IPC without a Native provider and does not save a temporary chat', async () => {
   const chat = new Chat(); chat.temporary = true; chat.runtime = { connectionId: 'h', kind: 'hermes', profile: 'research', sessionId: 'prior' }

@@ -19,8 +19,8 @@ test('Connections contains the manual Native entry point', async () => {
 })
 
 test('manual OpenCode configuration starts a new chat with the selected binding', async () => {
-  vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'o', kind: 'opencode', name: 'Code', endpoint: 'http://localhost:4096' }])
-  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: ['plan'], profiles: [], models: [] })
+  vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'o', kind: 'opencode', name: 'Code', endpoint: 'http://localhost:4096', defaultProvider: 'p', defaultModel: 'm' }])
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: ['plan'], profiles: [], models: [{ provider: 'p', id: 'm', name: 'Model' }] })
   const wrapper = mount(SettingsRuntimeConnections)
   await flushPromises()
   await wrapper.find('.runtime-chat select').setValue('o')
@@ -28,6 +28,6 @@ test('manual OpenCode configuration starts a new chat with the selected binding'
   await wrapper.findAll('.runtime-chat select').find(s => s.text().includes('plan'))!.setValue('plan')
   await wrapper.findAll('button').find(b => b.text() === 'runtime.useTarget')!.trigger('click')
   await flushPromises()
-  expect(emitBusEventMock).toHaveBeenCalledWith('new-chat', { runtime: expect.objectContaining({ connectionId: 'o', kind: 'opencode', agent: 'plan' }) })
+  expect(emitBusEventMock).toHaveBeenCalledWith('new-chat', { runtime: expect.objectContaining({ connectionId: 'o', kind: 'opencode', agent: 'plan', provider: 'p', model: 'm' }) })
   expect(window.api.runtime.start).not.toHaveBeenCalled()
 })
