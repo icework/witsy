@@ -1,32 +1,38 @@
 <template>
-  <div class="contextworkflows tab-content">
+  <div class="contextworkflows tab-content agent-settings">
     <header><div class="title">{{ t('contextWorkflow.title') }}</div></header>
     <main>
       <div class="master-detail">
         <aside class="md-master">
           <div class="list-heading"><span>{{ t('chatAgent.total', { count: workflows.length }) }}</span><button :aria-label="t('contextWorkflow.new')" @click="create"><PlusIcon /></button></div>
           <div class="md-master-list">
-            <button v-for="workflow in workflows" :key="workflow.id" class="md-master-list-item" :class="{ selected: draft?.id === workflow.id }" @click="select(workflow)"><span><strong>{{ workflow.name }}</strong><small>{{ t('contextWorkflow.' + workflow.contextInput) }}{{ workflow.enabled ? '' : ' · ' + t('contextWorkflow.disabled') }}</small></span></button>
+            <button v-for="workflow in workflows" :key="workflow.id" class="md-master-list-item" :class="{ selected: draft?.id === workflow.id }" @click="select(workflow)"><WorkflowIcon aria-hidden="true" /><span><strong>{{ workflow.name }}</strong><small>{{ t('contextWorkflow.' + workflow.contextInput) }}{{ workflow.enabled ? '' : ' · ' + t('contextWorkflow.disabled') }}</small></span></button>
           </div>
         </aside>
         <section class="md-detail">
-          <form v-if="draft" class="form form-large" @submit.prevent="save">
+          <div v-if="draft" class="editor-heading"><h2>{{ draft.name || t('contextWorkflow.new') }}</h2><p>{{ t('agentDesign.workflowHelp') }}</p></div>
+          <form v-if="draft" class="agent-form" @submit.prevent="save">
+            <section class="form-section">
             <label>{{ t('contextWorkflow.name') }}<input v-model="draft.name" required /></label>
             <label>{{ t('contextWorkflow.input') }}<select v-model="draft.contextInput"><option value="screenshot">{{ t('contextWorkflow.screenshot') }}</option><option value="selected-text">{{ t('contextWorkflow.selected-text') }}</option></select></label>
             <p>{{ draft.contextInput === 'selected-text' ? t('contextWorkflow.selectionHelp') : t('contextWorkflow.screenshotHelp') }}</p>
             <label>{{ t('chatAgent.label') }}<select v-model="draft.agentId"><option value="">{{ t('chatAgent.chooseAfter') }}</option><option v-if="draft.agentId && !agents.some(a => a.id === draft.agentId)" :value="draft.agentId" disabled>{{ t('contextWorkflow.missingAgent') }}</option><option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }} ({{ agent.kind }})</option></select></label>
             <label>{{ t('contextWorkflow.prompt') }}<textarea v-model="draft.prompt" rows="4" /></label>
+            </section>
+            <section class="form-section">
+            <h3>{{ t('agentDesign.activation') }}</h3>
             <label>{{ t('chatAgent.accelerator') }}<input v-model="draft.accelerator" placeholder="Command+Shift+2" /></label>
             <p>{{ t('contextWorkflow.shortcutHelp') }}</p>
             <label class="enabled"><input type="checkbox" v-model="draft.enabled" />{{ t('contextWorkflow.enabled') }}</label>
             <p>{{ t('contextWorkflow.previewHelp') }}</p>
-            <div class="actions">
-              <button type="submit" :disabled="working">{{ t('common.save') }}</button>
+            </section>
+            <div class="form-actions">
+              <button class="primary" type="submit" :disabled="working">{{ t('common.save') }}</button>
               <button type="button" @click="reset">{{ t('common.cancel') }}</button>
-              <button v-if="draft.id" type="button" @click="remove" :disabled="working">{{ t('common.delete') }}</button>
+              <button class="danger" v-if="draft.id" type="button" @click="remove" :disabled="working">{{ t('common.delete') }}</button>
             </div>
           </form>
-          <p v-else>{{ t('contextWorkflow.empty') }}</p>
+          <div v-else class="empty-state"><WorkflowIcon /><p>{{ t('contextWorkflow.empty') }}</p><button @click="create">{{ t('contextWorkflow.new') }}</button></div>
           <p v-if="error" role="alert">{{ error }}</p>
           <p v-if="savedNotice" role="status">{{ t('contextWorkflow.saved') }}</p>
         </section>
@@ -36,7 +42,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PlusIcon } from 'lucide-vue-next'
+import { PlusIcon, WorkflowIcon } from 'lucide-vue-next'
 import { t } from '@services/i18n'
 import useEventBus from '@composables/event_bus'
 import { ChatAgent, ContextWorkflow } from '../../types/chat_agent'
@@ -63,17 +69,3 @@ const reset = () => { const saved = workflows.value.find(w => w.id === draft.val
 const remove = () => attempt(async () => { await window.api.chatAgents.removeWorkflow(draft.value.id); workflows.value = await window.api.chatAgents.workflows(); draft.value = undefined; if (workflows.value[0]) select(workflows.value[0]); emitBusEvent('chat-agent-settings-changed') })
 defineExpose({ load })
 </script>
-<style scoped>
-.contextworkflows { height: 100%; }
-.contextworkflows > main { padding: 0; flex: 1; min-height: 0; }
-.master-detail { height: 100%; }
-.list-heading { display: flex; justify-content: space-between; align-items: center; color: var(--dimmed-text-color); }
-.list-heading svg { width: var(--form-normal-font-size); height: var(--form-normal-font-size); }
-.md-master-list-item { justify-content: flex-start; text-align: left; border: none; background: transparent; }
-.md-master-list-item span { overflow: hidden; }
-.md-master-list-item strong, .md-master-list-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.md-master-list-item small { color: var(--dimmed-text-color); }
-form > label { display: flex; flex-direction: column; margin-block: var(--form-normal-font-size); }
-form > label.enabled { flex-direction: row; align-items: center; }
-.actions { display: flex; gap: var(--control-border-radius); flex-wrap: wrap; }
-</style>

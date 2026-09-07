@@ -1,5 +1,5 @@
 <template>
-  <div class="chatagents tab-content">
+  <div class="chatagents tab-content agent-settings">
     <header><div class="title">{{ t('chatAgent.settingsTitle') }}</div></header>
     <main>
       <div class="master-detail">
@@ -7,13 +7,14 @@
           <div class="list-heading"><span>{{ t('chatAgent.total', { count: agents.length }) }}</span><button :aria-label="t('chatAgent.newAgent')" @click="create"><PlusIcon /></button></div>
           <div class="md-master-list">
             <button v-for="agent in agents" :key="agent.id" class="md-master-list-item" :class="{ selected: edited?.id === agent.id }" @click="edited = agent">
-              <span><strong>{{ agent.name }}</strong><small>{{ agent.kind }}{{ agent.description ? ' · ' + agent.description : '' }}</small></span>
+              <BotIcon aria-hidden="true" /><span><strong>{{ agent.name }}</strong><small>{{ agent.kind }}{{ agent.description ? ' · ' + agent.description : '' }}</small></span>
             </button>
           </div>
         </aside>
         <section class="md-detail">
+          <div v-if="edited !== undefined" class="editor-heading"><h2>{{ edited?.name || t('chatAgent.newAgent') }}</h2><p>{{ t('agentDesign.agentHelp') }}</p></div>
           <ChatAgentEditor v-if="edited !== undefined" :key="edited?.id || newKey" :agent="edited" @saved="saved" @removed="removed" />
-          <p v-else>{{ t('chatAgent.emptyAgents') }}</p>
+          <div v-else class="empty-state"><BotIcon /><p>{{ t('chatAgent.emptyAgents') }}</p><button @click="create">{{ t('chatAgent.newAgent') }}</button></div>
           <p v-if="error" role="alert">{{ error }}</p>
         </section>
       </div>
@@ -22,7 +23,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PlusIcon } from 'lucide-vue-next'
+import { BotIcon, PlusIcon } from 'lucide-vue-next'
 import ChatAgentEditor from '@components/ChatAgentEditor.vue'
 import useEventBus from '@composables/event_bus'
 import { t } from '@services/i18n'
@@ -40,14 +41,3 @@ const saved = async (agent: ChatAgent) => { await load(); edited.value = agent; 
 const removed = async () => { edited.value = undefined; await load(); emitBusEvent('chat-agent-settings-changed') }
 defineExpose({ load })
 </script>
-<style scoped>
-.chatagents { height: 100%; }
-.chatagents > main { padding: 0; flex: 1; min-height: 0; }
-.master-detail { height: 100%; }
-.list-heading { display: flex; justify-content: space-between; align-items: center; color: var(--dimmed-text-color); }
-.list-heading svg { width: var(--form-normal-font-size); height: var(--form-normal-font-size); }
-.md-master-list-item { justify-content: flex-start; text-align: left; border: none; background: transparent; }
-.md-master-list-item span { overflow: hidden; }
-.md-master-list-item strong, .md-master-list-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.md-master-list-item small { color: var(--dimmed-text-color); }
-</style>

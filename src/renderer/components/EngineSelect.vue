@@ -2,7 +2,6 @@
 <template>
   <select name="engine" v-model="value" @change="$emit('change')" :disabled="disabled">
     <option value="" v-if="defaultText">{{ defaultText }}</option>
-    <option :value="favoriteMockEngine" v-if="showFavorites">Favorite models</option>
     <option value="openai">OpenAI</option>
     <option value="anthropic">Anthropic</option>
     <option value="google">Google</option>
@@ -24,13 +23,12 @@
 import { CustomEngineConfig } from 'types/config'
 import { computed } from 'vue'
 import { store } from '@services/store'
-import LlmFactory, { favoriteMockEngine } from '@services/llms/llm'
+import LlmFactory from '@services/llms/llm'
 
 const llmManager = LlmFactory.manager(store.config)
 
 const props = defineProps({
   defaultText: String,
-  favorites: Boolean,
   disabled: {
     type: Boolean,
     default: false
@@ -40,9 +38,6 @@ const props = defineProps({
 const value = defineModel()
 const emit = defineEmits(['change'])
 
-const showFavorites = computed(() => {
-  return props.favorites && llmManager?.getChatModels(favoriteMockEngine)?.length > 0
-})
 
 const custom = computed(() => {
   const customs = llmManager.getCustomEngines()

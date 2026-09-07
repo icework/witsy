@@ -59,13 +59,13 @@ type Engine = {
 const llmManager: ILlmManager = LlmFactory.manager(store.config)
 
 const createEngine = ref(null)
-const currentEngine= ref<string>(llmManager.getChatEngines({ favorites: false })[0])
+const currentEngine= ref<string>(llmManager.getChatEngines()[0])
 const engineSettings = ref(null)
 
 const isCustom = computed(() => llmManager.isCustomEngine(currentEngine.value))
 
 const engines = computed(() => {
-  const engines = llmManager.getChatEngines({ favorites: false }).map(id => {
+  const engines = llmManager.getChatEngines().map(id => {
     if (llmManager.isCustomEngine(id)) {
       return {
         id: id,

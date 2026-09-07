@@ -1,14 +1,18 @@
 <template>
-    <form class="chat-agent-editor form form-large" @submit.prevent="save">
+    <form class="chat-agent-editor agent-form" @submit.prevent="save">
+      <section class="form-section">
       <div class="agent-row">
         <label>{{ t('chatAgent.name') }}<input v-model="draft.name" required /></label>
         <label>{{ t('runtime.type') }}<select v-model="draft.kind" @change="changeKind"><option value="native">Native</option><option value="hermes">Hermes</option><option value="opencode">OpenCode</option></select></label>
       </div>
       <label>{{ t('chatAgent.description') }}<textarea v-model="draft.description" rows="2" /></label>
+      </section>
+      <section class="form-section">
+      <h3>{{ t('agentDesign.behavior') }}</h3>
       <template v-if="draft.kind === 'native'">
         <div class="agent-row">
-          <label>{{ t('runtime.provider') }}<select v-model="native.engine" @change="native.model = ''"><option v-for="engine in engines" :key="engine" :value="engine">{{ manager.getEngineName(engine) }}</option></select></label>
-          <label>{{ t('runtime.model') }}<select v-model="native.model" required><option value="">{{ t('runtime.model') }}</option><option v-for="model in nativeModels" :key="model.id" :value="model.id">{{ model.name }}</option></select></label>
+          <label>{{ t('chatAgent.provider') }}<select v-model="native.engine" :aria-label="t('chatAgent.provider')" @change="native.model = ''" required><option value="" disabled>{{ t('chatAgent.provider') }}</option><option v-if="native.engine && !engines.includes(native.engine)" :value="native.engine" disabled>{{ t('chatAgent.provider') }}</option><option v-for="engine in engines" :key="engine" :value="engine">{{ manager.getEngineName(engine) }}</option></select></label>
+          <label>{{ t('runtime.model') }}<select v-model="native.model" required><option value="">{{ t('runtime.model') }}</option><option v-if="native.model && !nativeModels.some(model => model.id === native.model)" :value="native.model">{{ native.model }}</option><option v-for="model in nativeModels" :key="model.id" :value="model.id">{{ model.name }}</option></select></label>
         </div>
         <label>{{ t('chatAgent.instructions') }}<textarea v-model="native.instructions" rows="3" /></label>
         <label>{{ t('chatAgent.tools') }}<input v-model="toolIds" :placeholder="t('chatAgent.toolsHelp')" /></label>
@@ -29,10 +33,11 @@
         <p>{{ draft.kind === 'hermes' ? t('runtime.hermesDirectory') : t('runtime.externalStorage') }}</p>
         <p v-if="!matchingConnections.length">{{ t('chatAgent.connectionHelp') }}</p>
       </template>
-      <div class="agent-row">
-        <button type="submit" :disabled="working">{{ t('common.save') }}</button>
-        <button v-if="draft.id" type="button" @click="remove">{{ t('common.delete') }}</button>
+      </section>
+      <div class="form-actions">
+        <button class="primary" type="submit" :disabled="working">{{ t('common.save') }}</button>
         <button type="button" @click="reset">{{ t('common.cancel') }}</button>
+        <button class="danger" v-if="draft.id" type="button" @click="remove">{{ t('common.delete') }}</button>
       </div>
       <p v-if="error" role="alert">{{ error }}</p>
       <p v-if="notice" role="status">{{ notice }}</p>
@@ -55,7 +60,7 @@ const toolIds = ref('none')
 const connections = ref<RuntimeConnection[]>([])
 const catalog = ref<RuntimeCatalog>({ agents: [], profiles: [], models: [] })
 const working = ref(false), error = ref(''), notice = ref('')
-const engines = computed(() => manager.getChatEngines())
+const engines = computed(() => manager.getChatEngines().filter(engine => !!manager.getEngineName(engine)))
 const nativeModels = computed(() => native.value.engine ? manager.getChatModels(native.value.engine) : [])
 const matchingConnections = computed(() => connections.value.filter(c => c.kind === draft.value.kind))
 const attempt = async (action: () => Promise<void>) => {
@@ -84,9 +89,3 @@ const save = () => attempt(async () => {
 })
 const remove = () => attempt(async () => { await window.api.chatAgents.remove(draft.value.id); emit('removed', draft.value.id) })
 </script>
-<style scoped>
-.agent-row { display: flex; flex-wrap: wrap; align-items: end; gap: var(--form-normal-font-size); }
-.agent-row label { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.chat-agent-editor > label { display: flex; flex-direction: column; margin-block: var(--form-normal-font-size); }
-.chat-agent-editor textarea { width: 100%; box-sizing: border-box; }
-</style>

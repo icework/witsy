@@ -404,12 +404,8 @@ export default class Generator {
   }
 
   async getConversation(messages: Message[]): Promise<Message[]> {
-    const conversationLength = this.config.llm.conversationLength
-    const chatMessages = messages.filter((msg) => msg.role !== 'system')
-    const conversation = [
-      messages[0],
-      ...chatMessages.slice(-conversationLength * 2, -1)
-    ]
+    // Keep the full history, excluding the response placeholder being generated.
+    const conversation = messages.slice(0, -1)
     for (const message of conversation) {
       for (const attachment of message.attachments) {
         if (attachment && !attachment.content) {

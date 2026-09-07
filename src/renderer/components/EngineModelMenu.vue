@@ -23,17 +23,7 @@
       
       <template v-for="engine in availableEngines" :key="engine">
 
-        <template v-if="llmManager.isFavoriteEngine(engine)">
-          <div class="engine-item" v-for="model in getEngineModels(engine)" :key="model.id" @click="handleFavoriteClick(model.id)">
-            <EngineLogo :engine="getFavoriteEngine(model.id)" :grayscale="isDarkTheme" :custom-label="false" class="engine-logo" />
-            <span class="engine-name emphasis">{{ getFavoriteModel(model.id)?.name || model.id }}</span>
-          </div>
-          <div class="separator" v-if="llmManager.isFavoriteEngine(engine)">
-            <hr />
-          </div>
-        </template>
-
-        <div class="engine-item" :data-submenu-slot="`engine-${engine}`" v-else>
+        <div class="engine-item" :data-submenu-slot="`engine-${engine}`">
           <EngineLogo :engine="engine" :grayscale="isDarkTheme" :custom-label="false" class="engine-logo" />
           <span class="engine-name">{{ getEngineName(engine) }}</span>
         </div>
@@ -79,13 +69,11 @@ interface Props {
   teleport?: boolean
   defaultLabel?: string
   cssClasses?: string
-  favorites?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   position: 'below',
   teleport: true,
-  favorites: true
 })
 
 // Emits
@@ -111,25 +99,17 @@ const availableEngines = computed(() => {
   if (!store.workspace?.models) {
     return llmManager.getChatEngines().filter(engine => {
       return llmManager.isEngineReady(engine) && llmManager.hasChatModels(engine)
-    }).filter((engine) => {
-      return !llmManager.isFavoriteEngine(engine) || store.isFeatureEnabled('favorites')
-    }).filter((engine) => {
-      if (props.favorites) return true
-      return !llmManager.isFavoriteEngine(engine)
-    })
-    .sort((a, b) => {
-      if (llmManager.isFavoriteEngine(a)) return -1
-      if (llmManager.isFavoriteEngine(b)) return 1
+    }).sort((a, b) => {
       const nameA = llmManager.getEngineName(a).toLowerCase()
       const nameB = llmManager.getEngineName(b).toLowerCase()
       return nameA.localeCompare(nameB)
     })
   }
 
-  // Filter engines based on workspace favorite models
+  // Filter engines based on workspace models
   const workspaceEngines = [...new Set(store.workspace.models.map(model => model.engine))]
   return workspaceEngines.filter(engine => {
-    return llmManager.isEngineReady(engine) && llmManager.hasChatModels(engine) && !llmManager.isFavoriteEngine(engine)
+    return llmManager.isEngineReady(engine) && llmManager.hasChatModels(engine)
   }).sort((a, b) => {
     const nameA = llmManager.getEngineName(a).toLowerCase()
     const nameB = llmManager.getEngineName(b).toLowerCase()
@@ -148,9 +128,6 @@ onMounted(() => {
 })
 
 const getEngineName = (engine: string): string => {
-  if (llmManager.isFavoriteEngine(engine)) {
-    return t('common.favorites.name')
-  }
   const name = llmManager.getEngineName(engine)
   return engineNames[name] ?? name
 }
@@ -163,7 +140,7 @@ const getEngineModels = (engine: string): ChatModel[] => {
     return allModels
   }
 
-  // Filter models based on workspace favorite models
+  // Filter models based on workspace models
   const workspaceModelIds = store.workspace.models
     .filter(model => model.engine === engine)
     .map(model => model.model)
@@ -176,23 +153,6 @@ const refreshModels = async (engine: string) => {
   await nextTick()
   await llmManager.loadModels(engine)
   refreshing.value = false
-}
-
-const getFavoriteEngine = (favoriteId: string): string => {
-  const fav = llmManager.getFavoriteModel(favoriteId)
-  return fav.engine
-}
-
-const getFavoriteModel = (favoriteId: string): ChatModel => {
-  const fav = llmManager.getFavoriteModel(favoriteId)
-  return llmManager.getChatModel(fav.engine, fav.model)
-} 
-
-const handleFavoriteClick = (favorite: string) => {
-  const fav = llmManager.getFavoriteModel(favorite)
-  if (fav) {
-    handleModelClick(fav.engine, fav.model)
-  }
 }
 
 const handleDefaultClick = () => {

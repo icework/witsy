@@ -1,8 +1,18 @@
 <template>
   <div class="chat split-pane" :class="{ 'quick-chat': screenshot.compact }">
     <ChatSidebar v-show="!screenshot.compact" :chat="assistant.chat" :generating-chat-ids="generatingChatIds" ref="sidebar" />
-    <ChatArea :enable-model-selection="mode !== 'chat'" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" :chat="assistant.chat" :is-left-most="!isSidebarVisible" ref="chatArea" @prompt="onSendPrompt" @stop-generation="onStopGeneration" @toggle-sidebar="onToggleSidebar">
-      <template #runtime><ChatAgentPicker v-if="mode === 'chat' && assistant.chat" ref="agentPicker" :chat="assistant.chat" :busy="isGenerating || !!assistant.chat.lastMessage()?.transient" @configure="onChatConfiguration" @select="onChatAgent" @ask="onScreenshotAsk" @removed-screenshot="onScreenshotRemoved" @compact="onScreenshotState" /><RuntimeChat v-show="!screenshot.image && screenshot.contextKind !== 'selected-text'" v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" ref="runtimeChat" @bind="onRuntimeBinding" @progress="latestChunk = { type: 'content', text: '', done: false }" /></template>
+    <ChatArea :compact="screenshot.compact" :enable-context="mode === 'chat'" :context-disabled="screenshot.busy || screenshot.capturing || !!assistant.chat?.lastMessage()?.transient" @context-requested="agentPicker?.addContext($event)" :enable-model-selection="mode !== 'chat'" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" :chat="assistant.chat" :is-left-most="!isSidebarVisible" ref="chatArea" @prompt="onSendPrompt" @stop-generation="onStopGeneration" @toggle-sidebar="onToggleSidebar">
+      <template #composer-controls>
+        <ChatConfiguration v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :disabled="quickChatLoading || isGenerating || screenshot.busy || screenshot.capturing || !!assistant.chat.lastMessage()?.transient" @change="onChatConfiguration" />
+      </template>
+      <template #runtime>
+        <ChatAgentPicker v-if="mode === 'chat' && assistant.chat" ref="agentPicker" :chat="assistant.chat" :busy="quickChatLoading || isGenerating || !!assistant.chat.lastMessage()?.transient" @select="onChatAgent" @ask="onScreenshotAsk" @removed-screenshot="onScreenshotRemoved" @compact="onScreenshotState">
+          <template #composer-controls><ChatConfiguration v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :disabled="quickChatLoading || isGenerating || screenshot.busy || screenshot.capturing || !!assistant.chat.lastMessage()?.transient" @change="onChatConfiguration" /></template>
+        </ChatAgentPicker>
+        <RuntimeChat :context-disabled="screenshot.busy || screenshot.capturing" @context-requested="agentPicker?.addContext($event)" v-show="!screenshot.image && screenshot.contextKind !== 'selected-text'" v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :screenshot-pending="!!screenshot.image || screenshot.contextKind === 'selected-text'" ref="runtimeChat" @bind="onRuntimeBinding" @progress="latestChunk = { type: 'content', text: '', done: false }">
+          <template #composer-controls><ChatConfiguration v-if="mode === 'chat' && assistant.chat" :chat="assistant.chat" :disabled="quickChatLoading || isGenerating || screenshot.busy || screenshot.capturing || !!assistant.chat.lastMessage()?.transient" @change="onChatConfiguration" /></template>
+        </RuntimeChat>
+      </template>
     </ChatArea>
     <ChatEditor :chat="assistant.chat" :dialog-title="chatEditorTitle" :confirm-button-text="chatEditorConfirmButtonText" :on-confirm="chatEditorCallback" ref="chatEditor" />
     <CreateAgentRun :title="agent?.name ?? ''" ref="builder" />
@@ -11,6 +21,7 @@
 </template>
 
 <script setup lang="ts">
+import ChatConfiguration from '@components/ChatConfiguration.vue'
 
 import ChatAgentPicker from '@components/ChatAgentPicker.vue'
 import { ChatAgent, ScreenshotState } from '../../types/chat_agent'
@@ -159,7 +170,11 @@ const builder = ref<typeof CreateAgentRun>(null)
 const picker = ref<typeof AgentPicker>(null)
 const agent = ref<Agent|null>(null)
 
-const isSidebarVisible = computed(() => sidebar.value?.isVisible() ?? true)
+const isSidebarVisible = computed(() => !screenshot.value.compact && (sidebar.value?.isVisible() ?? true))
+let lastQuickChat: Chat | null = null
+let quickChatDraft: Message | null = null
+let handledQuickChatRequest = ''
+const quickChatLoading = ref(false)
 
 // session management helpers
 const createSession = (chat: Chat): ChatSession => {
@@ -173,6 +188,11 @@ const createSession = (chat: Chat): ChatSession => {
 }
 
 const setActiveSession = (chatId: string, chat: Chat): ChatSession => {
+  if (activeSessionId.value !== chatId && lastQuickChat?.uuid === activeSessionId.value) {
+    quickChatDraft = lastQuickChat.runtime
+      ? new Message('user', runtimeChat.value?.getPrompt() || '')
+      : chatArea.value?.getDraft() || null
+  }
   // cleanup old idle session if switching away
   if (activeSessionId.value && activeSessionId.value !== chatId) {
     const oldSession = sessions.value[activeSessionId.value]
@@ -190,10 +210,17 @@ const setActiveSession = (chatId: string, chat: Chat): ChatSession => {
 
   // set active
   activeSessionId.value = chatId
+  if (screenshot.value.compact) {
+    lastQuickChat = session.assistant.chat
+    if (!quickChatLoading.value && !screenshot.value.capturing && !screenshot.value.image && screenshot.value.contextKind !== 'selected-text') {
+      void window.api.chatAgents.screenshotUpdate({ chatId, busy: session.status === 'generating' || !!chat.lastMessage()?.transient })
+    }
+  }
   return session
 }
 
 const cleanupSession = (chatId: string) => {
+  if (lastQuickChat?.uuid === chatId) { lastQuickChat = null; quickChatDraft = null }
   const session = sessions.value[chatId]
   if (session) {
     session.abortController?.abort()
@@ -303,6 +330,10 @@ onMounted(() => {
 })
 
 const onNewChat = async (payload?: any) => {
+  if (screenshot.value.compact && !payload) {
+    await window.api.chatAgents.openQuickChat(true)
+    return
+  }
   if (payload?.runtime) { onRuntimeBinding(payload.runtime); return }
   const { prompt, attachments, submit } = payload || {}
 
@@ -311,11 +342,11 @@ const onNewChat = async (payload?: any) => {
   const session = setActiveSession(newChat.uuid, newChat)
 
   updateChatEngineModel()
+  await nextTick()
   if (prompt) chatArea.value?.setPrompt(prompt)
   if (attachments) chatArea.value?.attach(attachments)
   chatArea.value?.setExpert(null)
   chatArea.value?.setDeepResearch(false)
-  await nextTick()
   latestChunk.value = null
   if (submit) {
     chatArea.value?.sendPrompt()
@@ -350,10 +381,57 @@ const onChatAgent = (agent: ChatAgent) => {
   latestChunk.value = null
   return chat
 }
+const startQuickChat = async (request: NonNullable<ScreenshotState['quickChatRequest']>) => {
+  handledQuickChatRequest = request.id
+  quickChatLoading.value = true
+  const originalChatId = activeSessionId.value
+  try {
+    if (!request.fresh && lastQuickChat) {
+      if (lastQuickChat.uuid !== activeSessionId.value) {
+        const draft = quickChatDraft
+        onSelectChat(lastQuickChat)
+        await nextTick()
+        if (draft) {
+          if (lastQuickChat.runtime) runtimeChat.value?.setPrompt(draft.content)
+          else chatArea.value?.setPrompt(draft)
+        }
+      }
+    } else {
+      const defaultId = store.config.prompt.defaultAgentId
+      let agent: ChatAgent | undefined
+      let warning = ''
+      if (defaultId) {
+        try {
+          agent = (await window.api.chatAgents.list()).find(a => a.id === defaultId)
+          if (!agent) warning = t('quickChat.fallback')
+        } catch { warning = t('quickChat.loadError') }
+      }
+      // A newer request or a manual conversation change takes precedence.
+      if (!screenshot.value.compact || screenshot.value.quickChatRequest?.id !== request.id || activeSessionId.value !== originalChatId) return
+      if (agent) onChatAgent(agent)
+      else onRuntimeBinding()
+      quickChatDraft = null
+      await nextTick()
+      if (assistant.value.chat.runtime) runtimeChat.value?.setPrompt('')
+      else chatArea.value?.setPrompt('')
+      if (warning) agentPicker.value?.reportError(warning)
+    }
+    await window.api.chatAgents.screenshotUpdate({ chatId: assistant.value.chat.uuid, busy: isGenerating.value || !!assistant.value.chat.lastMessage()?.transient })
+    await nextTick()
+    if (assistant.value.chat.runtime) runtimeChat.value?.focus()
+    else chatArea.value?.focusPrompt()
+  } catch (e) {
+    agentPicker.value?.reportError(e instanceof Error ? e.message : String(e))
+  } finally { quickChatLoading.value = false }
+}
 const onScreenshotState = (state: ScreenshotState) => {
   screenshot.value = state
+  if (state.compact && state.quickChatRequest && state.quickChatRequest.id !== handledQuickChatRequest) {
+    void startQuickChat(state.quickChatRequest)
+    return
+  }
   if (state.compact && state.chatId && state.chatId !== assistant.value.chat.uuid) {
-    const chat = store.history.chats.find(c => c.uuid === state.chatId)
+    const chat = sessions.value[state.chatId]?.assistant.chat || (lastQuickChat?.uuid === state.chatId ? lastQuickChat : store.history.chats.find(c => c.uuid === state.chatId))
     if (chat) onSelectChat(chat)
   }
 }
@@ -1045,6 +1123,10 @@ defineExpose({
    We don't know why though */
 .chat.split-pane {
   height: calc(100vh - var(--window-toolbar-height) - 2.5rem - 1px) !important;
+}
+
+.chat.split-pane.quick-chat {
+  height: calc(100vh - var(--window-toolbar-height)) !important;
 }
 
 </style>

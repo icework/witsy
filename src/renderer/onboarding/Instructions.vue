@@ -68,7 +68,6 @@
             :enable-commands="false"
             :enable-experts="false"
             :enable-deep-research="false"
-            :enable-instructions="false"
             :enable-doc-repo="false"
             :enable-dictation="false"
             :enable-conversations="false"

@@ -33,7 +33,6 @@
       <Prompt
         :chat="chat"
         :is-generating="processing"
-        :enable-instructions="false"
         :enable-commands="false"
         :conversation-mode="conversationMode"
         :history-provider="historyProvider"

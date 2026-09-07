@@ -48,7 +48,7 @@
       <button name="move" @click="onMove" v-if="displayMode === 'folder'"><FolderInputIcon /> {{ t('common.move') }}</button>
       <button name="delete" @click="onDelete"><Trash2Icon /></button>
     </footer>
-    <div class="resizer" :style="`left: ${width-5}px`" @mousedown="onResizeSidebarStart" v-if="visible">&nbsp;</div>
+    <div class="resizer" @mousedown="onResizeSidebarStart" v-if="visible">&nbsp;</div>
   </div>
 </template>
 
@@ -223,7 +223,8 @@ const onResizeSidebarStart = async (event: MouseEvent) => {
   manualResize.value = true
   await nextTick()
   // Calculate offset based on where user clicked vs current width
-  panelOffset = event.clientX - width.value
+  const actualWidth = (event.currentTarget as HTMLElement)?.parentElement?.getBoundingClientRect().width || width.value
+  panelOffset = event.clientX - actualWidth
   onDomEvent(window, 'mousemove', onResizeSidebarMove)
   onDomEvent(window, 'mouseup', onResizeSidebarEnd)
 }
@@ -276,6 +277,8 @@ defineExpose({
   .sp-sidebar {
     
     flex: 0 0 0px;
+    max-width: 36%;
+    min-width: 0;
     position: relative;
     overflow: hidden;
 
@@ -388,7 +391,8 @@ defineExpose({
 
     .resizer {
       position: absolute;
-      width: 8px;
+      right: 0;
+      width: var(--space-4);
       height: 100%;
       cursor: ew-resize;
       background-color: transparent;

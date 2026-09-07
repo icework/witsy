@@ -48,3 +48,30 @@ test('settings can configure a new target without exposing a composer or changin
   expect(window.api.runtime.start).not.toHaveBeenCalled()
   expect(chat.runtime.kind).toBe('hermes')
 })
+
+
+test('external runtime composer offers context attachments without submitting a run', async () => {
+  const chat = new Chat(); chat.runtime = { connectionId: 'h', kind: 'hermes', profile: 'default' }
+  const wrapper = mount(RuntimeChat, { props: { chat }, attachTo: document.body })
+  await flushPromises()
+  await wrapper.find('.runtime-context').trigger('click'); await flushPromises()
+  const item = document.querySelector('.context-text') as HTMLElement
+  expect(item).not.toBeNull()
+  item.click(); await flushPromises()
+  expect(wrapper.emitted('contextRequested')?.[0]).toEqual(['text'])
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+})
+
+test('new connection opens an editable draft and Cancel leaves saved connections alone', async () => {
+  const wrapper = mount(RuntimeChat, { props: { chat: new Chat(), configuration: true } })
+  await flushPromises()
+  expect(wrapper.findAll('button').find(button => button.text() === 'agentDesign.editConnection')?.attributes('disabled')).toBeDefined()
+  await wrapper.findAll('button').find(button => button.text() === 'runtime.add')!.trigger('click')
+  const form = wrapper.find('form')
+  expect(form.exists()).toBe(true)
+  await form.findAll('input')[0].setValue('Draft connection')
+  await form.findAll('button').find(button => button.text() === 'common.cancel')!.trigger('click')
+  expect(wrapper.find('form').exists()).toBe(false)
+  expect(window.api.runtime.save).not.toHaveBeenCalled()
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+})

@@ -115,7 +115,12 @@ describe('Backup functionality', () => {
       // expect(history.historyFilePath).toHaveBeenCalledWith(app)
       // expect(experts.expertsFilePath).toHaveBeenCalledWith(app)
       expect(commands.commandsFilePath).toHaveBeenCalledWith(app)
-      expect(mockArchive.file).toHaveBeenCalledTimes(3)
+      expect(mockArchive.file).toHaveBeenCalledTimes(10)
+      for (const name of ['runtime-connections.json', 'chat-agents.json', 'context-workflows.json', 'screenshot-action.json', 'apiKeys-debug.json']) {
+        expect(mockArchive.file).toHaveBeenCalledWith(`/mock/userdata/${name}`, { name })
+      }
+      expect(mockArchive.directory).toHaveBeenCalledWith('/mock/userdata/skills', 'skills')
+      expect(fs.createWriteStream).toHaveBeenCalledWith(expect.stringMatching(/witsy-backup-.*T.*\.zip$/), { mode: 0o600, flags: 'wx' })
       expect(mockArchive.finalize).toHaveBeenCalled()
     })
 
@@ -202,6 +207,10 @@ describe('Backup functionality', () => {
       // expect(history.historyFilePath).toHaveBeenCalledWith(app)
       // expect(experts.expertsFilePath).toHaveBeenCalledWith(app)
       expect(commands.commandsFilePath).toHaveBeenCalledWith(app)
+      for (const name of ['runtime-connections.json', 'chat-agents.json', 'context-workflows.json', 'screenshot-action.json', 'apiKeys-debug.json']) {
+        expect(fs.copyFileSync).toHaveBeenCalledWith(expect.stringContaining(name), `/mock/userdata/${name}`)
+      }
+      expect(fs.mkdirSync).toHaveBeenCalledWith('/mock/userdata/skills', { recursive: true })
     })
 
     test('should clean up temporary directory', async () => {

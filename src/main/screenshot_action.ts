@@ -55,6 +55,17 @@ const show = () => {
   publish()
 }
 
+export const openQuickChat = (fresh = false): void => {
+  if (state.capturing) { overlay?.show(); return }
+  // Reopening pending context or a running chat must not replace its state.
+  if (!state.busy && !state.image && state.contextKind !== 'selected-text') {
+    state.quickChatRequest = { id: crypto.randomUUID(), fresh }
+    state.chatId = undefined
+    state.error = undefined
+  }
+  show()
+}
+
 export const updateScreenshot = (update: { manualText?: boolean; dismiss?: boolean; chatId?: string; busy?: boolean; expand?: boolean; hide?: boolean }) => {
   if (update.manualText && !state.busy && !state.capturing && !state.image && state.contextKind !== 'selected-text') { beginContext('selected-text', null); state.error = undefined }
   if (update.dismiss) { state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.error = undefined }
@@ -134,6 +145,7 @@ export const captureScreenshot = async (fresh = false, workflow?: ContextWorkflo
 }
 
 const beginContext = (kind: 'screenshot' | 'selected-text', workflow?: ContextWorkflow | null) => {
+  state.quickChatRequest = undefined
   state.contextKind = kind; state.contextText = undefined; state.image = undefined; state.chatId = undefined
   state.requestId = crypto.randomUUID()
   if (workflow !== undefined) { state.agentId = workflow?.agentId; state.prompt = workflow?.prompt; state.workflowName = workflow?.name }

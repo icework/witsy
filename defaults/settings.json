@@ -1,4 +1,3 @@
-
 {
   "workspaceId": "00000000-0000-0000-0000-000000000000",
   "general": {
@@ -9,8 +8,7 @@
     "hideOnStartup": false,
     "proxyMode": "default",
     "customProxy": "",
-    "tips": {
-    },
+    "tips": {},
     "confirm": {
       "retryGeneration": true
     },
@@ -23,9 +21,7 @@
     "forceLocale": false,
     "engine": "openai",
     "instructions": "standard",
-    "favorites": [],
     "autoVisionSwitch": true,
-    "conversationLength": 20,
     "imageResize": 768,
     "defaults": [],
     "customInstructions": [],
@@ -72,6 +68,7 @@
     "autoSave": false
   },
   "prompt": {
+    "defaultAgentId": "",
     "engine": "",
     "model": "",
     "autosave": false,
@@ -93,7 +90,6 @@
       "video": "replicate",
       "videoEdit": "replicate"
     },
-    "favorites": [],
     "defaults": []
   },
   "shortcuts": {
@@ -153,7 +149,7 @@
     "excludePatterns": ".*,node_modules,__pycache__,venv"
   },
   "stt": {
-    "engine": "openai", 
+    "engine": "openai",
     "model": "gpt-4o-transcribe",
     "locale": "",
     "vocabulary": [],
@@ -200,18 +196,6 @@
     "tools": []
   },
   "engines": {
-    "__favorites__": {
-      "models": {
-        "chat": [],
-        "image": [],
-        "video": []
-      },
-      "model": {
-        "chat": "",
-        "image": "",
-        "video": ""
-      }
-    },
     "openai": {
       "apiKey": "",
       "baseURL": "https://api.openai.com/v1",

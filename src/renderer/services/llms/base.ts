@@ -1,13 +1,12 @@
 
 import * as llm from 'multi-llm-ts'
 import { CodeExecutionMode, Configuration, CustomEngineConfig, EngineConfig } from 'types/config'
-import { GetChatEnginesOpts, ILlmManager, ToolSelection } from 'types/llm'
+import { ILlmManager, ToolSelection } from 'types/llm'
 import defaults from '@root/defaults/settings.json'
 import { imageFormats, textFormats, parseableTextFormats } from '@models/attachment'
 import { PluginInstance, PluginsList } from '../plugins/plugins'
 import { store } from '../store'
 import { getFallbackModel as getAnthropicFallbackModel, isSpecializedModel as isSpecialAnthropicModel } from './anthropic'
-import { favoriteMockEngine } from './consts'
 import { areAllToolsEnabled, areToolsDisabled } from './llm'
 
 export { engineNames } from './consts'
@@ -32,19 +31,15 @@ export default class LlmManagerBase implements ILlmManager {
     throw new Error('getNonChatEngines not implemented')
   }
 
-  getChatEngines(opts?: GetChatEnginesOpts): string[] {
-    opts = { favorites: true, ...opts }
+  getChatEngines(): string[] {
     return [
-      ...(opts.favorites && this.config.llm.favorites.length ? [favoriteMockEngine] : []),
       ...this.getStandardEngines(),
       ...this.getCustomEngines()
     ]
   }
 
   getEngineName(engine: string): string {
-    if (this.isFavoriteEngine(engine)) {
-      return 'favorite'
-    } else if (!this.config.engines[engine]) {
+    if (!this.config.engines[engine]) {
       return 'custom'
     } else if (this.isCustomEngine(engine)) {
       return (this.config.engines[engine] as CustomEngineConfig)?.label
@@ -58,7 +53,7 @@ export default class LlmManagerBase implements ILlmManager {
   }
 
   isCustomEngine(engine: string): boolean {
-    return this.config.engines[engine] !== undefined && engine != favoriteMockEngine && !this.getStandardEngines().includes(engine) && !this.getNonChatEngines().includes(engine)
+    return this.config.engines[engine] !== undefined && !this.getStandardEngines().includes(engine) && !this.getNonChatEngines().includes(engine)
   }
   
   isSpecializedModel(engine: string, model: string): boolean {
@@ -66,79 +61,8 @@ export default class LlmManagerBase implements ILlmManager {
     return false
   }
 
-  isFavoriteEngine(engine: string): boolean {
-    return engine === favoriteMockEngine
-  }
-
-  getFavoriteId(engine: string, model: string): string {
-    return `${engine}-${model}`
-  }
-
-  isFavoriteId(id: string): boolean {
-    return this.config.llm.favorites.some(f => f.id === id)
-  }
-
-  isFavoriteModel(engine: string, model: string): boolean {
-    return this.isFavoriteEngine(engine) || this.isFavoriteId(this.getFavoriteId(engine, model))
-  }
-
-  getFavoriteModel(id: string): { engine: string, model: string }|null {
-    const favorite = this.config.llm.favorites.find(f => f.id === id)
-    return favorite ? { engine: favorite.engine, model: favorite.model } : null
-  }
-
-  addFavoriteModel(engine: string, model: string) {
-    const id = this.getFavoriteId(engine, model)
-    this.config.llm.favorites.push({
-      id: id,
-      engine: engine,
-      model: model,
-    })
-    store.saveSettings()
-  }
-
   isComputerUseModel(engine: string, model: string): boolean {
     return (engine === 'anthropic' && model === 'computer-use')
-  }
-
-  removeFavoriteModel(engine: string, model: string) {
-
-    // 1st remove
-    let id = model
-    if (!this.isFavoriteId(id)) {
-      id = this.getFavoriteId(engine, model)
-    }
-    const favorite = this.config.llm.favorites.find(f => f.id === id)
-    this.config.llm.favorites = this.config.llm.favorites.filter(f => f.id !== id)
-
-    // if this is the current model then switch
-    if (this.config.llm.engine === favoriteMockEngine) {
-      if (favorite) {
-        this.setChatModel(favorite.engine, favorite.model)
-      } else if (!this.config.llm.favorites.length) {
-        this.config.llm.engine = 'openai'
-      }
-    }
-    store.saveSettings()
-  }
-
-  reorderFavorites(index: number, direction: 'up' | 'down') {
-    if (index < 0 || index >= this.config.llm.favorites.length) {
-      return
-    }
-
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-
-    if (newIndex < 0 || newIndex >= this.config.llm.favorites.length) {
-      return
-    }
-
-    // Swap the favorites
-    const temp = this.config.llm.favorites[index]
-    this.config.llm.favorites[index] = this.config.llm.favorites[newIndex]
-    this.config.llm.favorites[newIndex] = temp
-
-    store.saveSettings()
   }
 
   getFallbackModel(engine: string): string {
@@ -169,40 +93,17 @@ export default class LlmManagerBase implements ILlmManager {
       }
     }
 
-    if (!this.isFavoriteEngine(engine)) {
-      return { engine, model }
-    } else {
-      const favorite = this.config.llm.favorites.find(f => f.id === model)
-      return favorite ? { engine: favorite.engine, model: favorite.model } : { engine, model }
-    }
+    return { engine, model }
   }
 
   getChatModels(engine: string): llm.ChatModel[] {
-    if (this.isFavoriteEngine(engine)) {
-      return this.config.llm.favorites.map(f => {
-        const model = this.getChatModel(f.engine, f.model)
-        return {
-          id: f.id,
-          name: `${this.getEngineName(f.engine)}/${f.model}`,
-          capabilities: model?.capabilities ?? llm.defaultCapabilities.capabilities,
-          meta: model?.meta ?? { id: f.model, name: f.model },
-        }
-      })
-    } else {
-      return this.config.engines[engine]?.models?.chat || []
-    }
+    return this.config.engines[engine]?.models?.chat || []
   }
 
   getChatModel(engine: string, model: string): llm.ChatModel {
-    if (this.isFavoriteEngine(engine)) {
-      const favorite = this.config.llm.favorites.find(f => f.id === model)
-      return this.getChatModel(favorite.engine, favorite.model)
-    } else {
-      const models = this.getChatModels(engine)
-      return models.find(m => m.id === model) || null
-    }
+    return this.getChatModels(engine).find(m => m.id === model) || null
   }
-  
+
   getDefaultChatModel(engine: string, acceptSpecializedModels: boolean = true): string {
   
     // get from config
@@ -211,12 +112,6 @@ export default class LlmManagerBase implements ILlmManager {
     // check specialized
     if (!acceptSpecializedModels && this.isSpecializedModel(engine, model)) {  
       return this.getFallbackModel(engine)
-    }
-
-    // check valid
-    if (this.isFavoriteEngine(engine)) {
-      const favorite = this.config.llm.favorites.find(f => f.id === model)
-      return favorite ? model : this.config.llm.favorites.length ? this.config.llm.favorites[0]?.id : ''
     }
 
     // default
@@ -246,19 +141,6 @@ export default class LlmManagerBase implements ILlmManager {
     throw new Error('igniteEngine not implemented')
   }
   
-  igniteFavoriteEngine(engine: string): llm.LlmEngine {
-    
-    const modelId = this.config.engines[favoriteMockEngine].model.chat
-    const favorite = this.config.llm.favorites.find(f => f.id === modelId)
-    if (favorite) {
-      return this.igniteEngine(favorite.engine)
-    }
-    
-    // error
-    throw new Error(`Cannot ignite favorite engine ${engine}`)
-
-  }
-
   igniteCustomEngine(engineId: string): llm.LlmEngine {
     
     const engineConfig = this.config.engines[engineId] as CustomEngineConfig
@@ -288,8 +170,7 @@ export default class LlmManagerBase implements ILlmManager {
   }
   
   hasChatModels(engine: string): boolean {
-    if (this.isFavoriteEngine(engine)) return this.config.llm.favorites.length > 0
-    else return this.config.engines[engine].models?.chat?.length > 0
+    return this.config.engines[engine]?.models?.chat?.length > 0
   }
   
   canProcessFormat(engine: string, model: string, format: string) {
@@ -349,7 +230,7 @@ export default class LlmManagerBase implements ILlmManager {
 
     // iterate on all engines
     let updated = false
-    for (const engine of this.getChatEngines({ favorites: false })) {
+    for (const engine of this.getChatEngines()) {
 
       try {
       

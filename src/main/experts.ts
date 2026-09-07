@@ -1,10 +1,7 @@
 
 import { Expert, ExpertCategory, ExpertData } from 'types/index'
-import { app, App } from 'electron'
-import { createI18n } from './i18n.base'
-import { getLocaleMessages } from './i18n'
+import { App } from 'electron'
 import { workspaceFolderPath } from './workspace'
-import defaultExpertsData from '@root/defaults/experts.json'
 import Monitor from './monitor'
 import * as window from './window'
 import * as file from './file'
@@ -65,17 +62,13 @@ const loadExpertData = (source: App|string, workspaceId: string): ExpertData => 
     }
   }
 
-  // needed
-  const defaultCategories = Array.isArray(defaultExpertsData.categories) ? defaultExpertsData.categories : (defaultExpertsData as any).categories
-  const defaultExperts = Array.isArray(defaultExpertsData) ? defaultExpertsData : (defaultExpertsData as any).experts
-
   // migrations can update
   let updated = false
 
   // migrate old experts format
   const expertData: ExpertData = {
-    categories: defaultCategories as ExpertCategory[],
-    experts: defaultExperts as Expert[],
+    categories: [],
+    experts: [],
   }
   
   if (Array.isArray(jsonData)) {
@@ -101,72 +94,23 @@ const loadExpertData = (source: App|string, workspaceId: string): ExpertData => 
     return expertData
   }
 
-  // i18n migrate label and template
-  const t = createI18n(getLocaleMessages(app), 'en', { missingWarn: false }).global.t as CallableFunction
+  // Built-in experts have been retired in favor of agents.
+  const removedCategoryIds = new Set(expertData.categories
+    .filter(category => category.type === 'system')
+    .map(category => category.id))
+  const userExperts = expertData.experts.filter(expert => expert.type !== 'system')
+  const userCategories = expertData.categories.filter(category => category.type !== 'system')
+  updated ||= userExperts.length !== expertData.experts.length || userCategories.length !== expertData.categories.length
+  expertData.experts = userExperts
+  expertData.categories = userCategories
+
   for (const expert of expertData.experts) {
-
-    const defaultExpert = defaultExperts.find((de: Expert) => de.id === expert.id)
-
-    const key = `experts.experts.${expert.id}`
-    if (expert.name === t(`${key}.name`)) {
-      delete expert.name
+    if (removedCategoryIds.has(expert.categoryId)) {
+      delete expert.categoryId
       updated = true
     }
-    if (expert.prompt === t(`${key}.prompt`)) {
-      delete expert.prompt
-      updated = true
-    }
-
-    // Initialize stats if missing
     if (!expert.stats) {
       expert.stats = { timesUsed: 0 }
-      updated = true
-    }
-
-    // assign categoryId from defaults for system experts if missing
-    if (expert.type === 'system' && !expert.categoryId) {
-      if (defaultExpert.categoryId !== undefined) {
-        expert.categoryId = defaultExpert.categoryId
-        updated = true
-      }
-    }
-
-    // add empty description
-    if (expert.type === 'system' && !expert.description) {
-      if (defaultExpert?.description) {
-        expert.description = defaultExpert.description
-        updated = true
-      }
-    }
-
-  }
-
-  // add new categories
-  for (const category of defaultCategories) {
-    const c = expertData.categories.find((cat: ExpertCategory) => cat.id === category.id)
-    if (c == null) {
-      expertData.categories.push(category as ExpertCategory)
-      updated = true
-    }
-  }
-
-  // now add new experts
-  for (const prompt of defaultExperts) {
-    const p = expertData.experts.find((prt: Expert) => prt.id === prompt.id)
-    if (p == null) {
-      expertData.experts.push(prompt as Expert)
-      updated = true
-    }
-  }
-
-  // delete deprecated experts
-  const deprecated = [
-    '6e197c43-1074-479b-89d5-3ab8d54ad36b' // doctor
-  ]
-  for (const id of deprecated) {
-    const index = expertData.experts.findIndex((expert: Expert) => expert.id === id)
-    if (index !== -1) {
-      expertData.experts.splice(index, 1)
       updated = true
     }
   }

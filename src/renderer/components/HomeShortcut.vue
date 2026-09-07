@@ -1,12 +1,12 @@
 <template>
-  <div class="shortcut" @click="onClick">
+  <button type="button" class="shortcut" @click="onClick">
     <component :is="icon" class="icon" v-if="icon"/>
     <AgentIcon class="icon" v-else />
     <div class="info">
       <h2>{{ name }}</h2>
       <p>{{ description }}</p>
     </div>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -31,14 +31,21 @@ function onClick() {
   
   width: 100%;
   box-sizing: border-box;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-xl);
+  margin: 0;
+  text-align: left;
+  background: var(--background-color);
+  box-shadow: var(--shadow-card);
   border: 1px solid var(--border-color);
   display: flex;
-  padding: 1rem 0.75rem;
+  padding: var(--space-12);
   flex-direction: row;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-8);
   cursor: pointer;
+
+  &:hover { border-color: var(--highlight-color); background: var(--background-color-light); }
+  &:focus-visible { outline: var(--space-1) solid var(--highlight-color); outline-offset: var(--space-2); }
 
   .icon {
     width: var(--icon-xl);
@@ -74,7 +81,10 @@ function onClick() {
       line-height: 16px;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
     }
 
   }

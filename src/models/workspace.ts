@@ -1,5 +1,5 @@
 
-import { FavoriteModel } from 'types/config'
+import { WorkspaceModel } from 'types/config'
 import { ToolSelection } from 'types/llm'
 import { WebApp } from 'types/workspace'
 
@@ -10,7 +10,7 @@ export default class Workspace {
   icon: string
   color: string
 
-  models: FavoriteModel[]
+  models: WorkspaceModel[]
   experts: string[]
   docrepos: string[]
   tools?: ToolSelection[]

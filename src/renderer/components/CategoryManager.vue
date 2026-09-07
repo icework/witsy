@@ -62,7 +62,7 @@ import { Eye, EyeOff, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref, toRaw } from 'vue'
 import Dialog from '@renderer/utils/dialog'
 import { createCategory, deleteCategory } from '@services/categories'
-import { categoryI18n, categoryI18nDefault, t } from '@services/i18n'
+import { categoryI18n, t } from '@services/i18n'
 import { Expert, ExpertCategory } from 'types/index'
 import { Workspace } from 'types/workspace'
 import ButtonIcon from './ButtonIcon.vue'
@@ -126,15 +126,8 @@ const saveEdit = () => {
     return
   }
 
-  // If the name matches the default i18n value, clear it to use the i18n key instead
-  // This allows system categories to fall back to their localized names
-  let newName = editingName.value.trim()
-  if (newName.trim() === categoryI18nDefault(editingCategory.value, 'name')) {
-    newName = undefined
-  }
-
   // Update the category name directly
-  editingCategory.value.name = newName
+  editingCategory.value.name = editingName.value.trim()
   save()
   emit('update')
   cancelEdit()

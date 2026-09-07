@@ -3,12 +3,12 @@
     
     <header :class="{ 'is-left-most': isLeftMost }">
       
-      <ButtonIcon class="toggle-sidebar" v-tooltip="{ text: t('main.toggleSidebar'), position: 'bottom-right' }" @click="toggleSideBar">
+      <ButtonIcon v-if="!compact" class="toggle-sidebar" v-tooltip="{ text: t('main.toggleSidebar'), position: 'bottom-right' }" @click="toggleSideBar">
         <PanelRightCloseIcon v-if="isLeftMost" />
         <PanelRightOpenIcon v-else />
       </ButtonIcon>
 
-      <ButtonIcon class="new-chat" v-if="isLeftMost" v-tooltip="{ text: t('common.newChat'), position: 'bottom-right' }" @click="onNewChat">
+      <ButtonIcon class="new-chat" v-if="isLeftMost && !compact" v-tooltip="{ text: t('common.newChat'), position: 'bottom-right' }" @click="onNewChat">
         <MessageCirclePlusIcon />
       </ButtonIcon>
 
@@ -16,7 +16,7 @@
         <IconRunAgent />
       </div> -->
 
-      <div class="title" @dblclick="onRenameChat">{{ chat?.title || '&nbsp;' }}</div>
+      <div class="title" @dblclick="onRenameChat">{{ chat?.title || (compact ? t('quickChat.title') : '\u00a0') }}</div>
       <span class="separator" v-if="chat?.title && chat?.createdAt">&bull;</span>
       <div class="created-at" v-if="chat?.title && chat?.createdAt">{{ t('chat.startedAt', { date: formatDate(chat.createdAt) }) }}</div>
       <div class="flex-push"></div>
@@ -71,7 +71,7 @@
       <div class="chat-content">
 
         <!-- <div class="chat-content-title">
-          <div class="title" @dblclick="onRenameChat">{{ chat?.title || '&nbsp;' }}</div>
+          <div class="title" @dblclick="onRenameChat">{{ chat?.title || (compact ? t('quickChat.title') : '\u00a0') }}</div>
           <div class="spacer"></div> -->
           <!-- <SlidersHorizontalIcon class="icon settings" @click="showModelSettings = !showModelSettings" /> -->
           <!-- <MoreVerticalIcon class="icon" @click="onMenu" />
@@ -79,7 +79,7 @@
 
         <MessageList class="chat-content-main" :chat="chat" :conversation-mode="conversationMode" v-if="chat?.hasMessages() && !screenshotPending" ref="messageList" />
         
-        <EmptyChat class="chat-content-main" @run-agent="onRunAgent" v-else-if="!screenshotPending" />
+        <EmptyChat :compact="compact" class="chat-content-main" @run-agent="onRunAgent" v-else-if="!screenshotPending" />
         
         <div class="deep-research-usage" v-if="prompt?.isDeepResearchActive() && tipsManager.isTipAvailable('deepResearchUsage')">
           {{  t('deepResearch.usage') }}
@@ -95,6 +95,9 @@
           :chat="chat"
           :enable-deep-research="true"
           :enable-model-selection="enableModelSelection"
+          :enable-context="enableContext"
+          :context-disabled="contextDisabled"
+          @context-requested="emit('context-requested', $event)"
           :conversation-mode="conversationMode"
           :history-provider="historyProvider"
           :is-generating="isGenerating"
@@ -103,7 +106,9 @@
           @prompt="onSendPrompt"
           @run-agent="onRunAgent"
           @stop="onStopGeneration"
-        />
+        >
+          <template #actions><slot name="composer-controls" /></template>
+        </Prompt>
       
       </div>
       
@@ -142,6 +147,9 @@ const tipsManager = useTipsManager(store)
 const llmManager: ILlmManager = LlmFactory.manager(store.config)
 
 const props = defineProps({
+  compact: { type: Boolean, default: false },
+  enableContext: { type: Boolean, default: false },
+  contextDisabled: { type: Boolean, default: false },
   enableModelSelection: { type: Boolean, default: true },
   screenshotPending: { type: Boolean, default: false },
   chat: {
@@ -213,7 +221,7 @@ const prompt= ref<typeof Prompt>(null)
 const conversationMode = ref<ConversationMode>('off')
 const showModelSettings = ref(false)
 
-const emit = defineEmits(['prompt', 'stop-generation', 'toggle-sidebar'])
+const emit = defineEmits(['context-requested', 'prompt', 'stop-generation', 'toggle-sidebar'])
 
 const onConversationMode = (mode: ConversationMode) => {
   conversationMode.value = mode
@@ -387,8 +395,10 @@ defineExpose({
     prompt.value?.focus()
   },
 
+  getDraft: () => prompt.value?.getDraft(),
+
   setPrompt: (userPrompt: string|Message) => {
-    prompt.value.setPrompt(userPrompt)
+    prompt.value?.setPrompt(userPrompt)
   },
 
   attach: (attachment: File) => {
@@ -492,6 +502,8 @@ defineExpose({
         display: flex;
         flex-direction: column;
         max-width: 100%;
+        min-width: 0;
+        min-height: 0;
         background-color: var(--message-list-bg-color);
 
         .deep-research-usage {
@@ -516,7 +528,7 @@ defineExpose({
         }
 
         &:deep() .prompt {
-          margin: 1.5rem;
+          margin: var(--space-4) var(--space-12) var(--space-12);
         }
       }
 
@@ -546,4 +558,6 @@ defineExpose({
     width: var(--info-panel-width);
   }
 }
+.chat-content > :deep(.runtime-chat:not(.runtime-configuration)) { width: auto; margin: 0 var(--space-12) var(--space-12); }
+.chat-content > :deep(.runtime-chat:empty) { display: none; }
 </style>

@@ -23,12 +23,7 @@
         <label>{{ t('designStudio.model') }}</label>
 
         <template v-if="allowModelEntry">
-          <ComboBox name="model" :items="models" v-model="model" @change="onChangeModel">
-            <button name="favorite" @click.prevent="toggleFavorite">
-              <StarOffIcon v-if="isFavorite"/>
-              <StarIcon v-else/>
-            </button>
-          </ComboBox>
+          <ComboBox name="model" :items="models" v-model="model" @change="onChangeModel" />
           <RefreshButton :on-refresh="getModels" />
           <a v-if="engine === 'falai'" :href="falaiModelsLink" target="_blank">{{ t('settings.plugins.image.falai.aboutModels') }}</a>
           <a v-if="engine === 'replicate'" :href="replicateModelsLink" target="_blank">{{ t('settings.plugins.image.replicate.aboutModels' ) }}</a>
@@ -156,7 +151,7 @@
 
 <script setup lang="ts">
 
-import { BrushIcon, LineSquiggleIcon, PaperclipIcon, StarIcon, StarOffIcon, UploadIcon, WandIcon, XIcon } from 'lucide-vue-next'
+import { BrushIcon, LineSquiggleIcon, PaperclipIcon, UploadIcon, WandIcon, XIcon } from 'lucide-vue-next'
 import { Model } from 'multi-llm-ts'
 import { FileContents } from 'types/file'
 import { DesignStudioMediaType, MediaCreator } from 'types/index'
@@ -273,7 +268,6 @@ const models = computed(() => {
   // if we have a specific list then return it
   if (store.config.engines[engine.value]?.models?.[modelType.value]?.length) {
     return addCurrentModel([
-      ...store.config.studio.favorites.filter((f) => f.engine === engine.value).map((f) => ({ id: f.model, name: f.model })),
       ...store.config.engines[engine.value].models[modelType.value]
     ])
   }
@@ -300,7 +294,6 @@ const models = computed(() => {
     }
 
     return addCurrentModel([
-      ...store.config.studio.favorites.filter((f) => f.engine === engine.value).map((f) => ({ id: f.model, name: f.model })),
       ...store.config.studio.defaults.filter((d) => d.engine === engine.value).map((d) => ({ id: d.model, name: d.model })),
       ...models
     ])
@@ -488,9 +481,6 @@ const falaiModelsLink = computed(() => {
   return `https://fal.ai/models?categories=${categories}`
 })
 
-const isFavorite = computed(() => {
-  return store.config.studio.favorites.find((f) => f.engine === engine.value && f.model === model.value) != null
-})
 
 const setInputImageKey = (key: string) => {
   params.value[key] = kReferenceParamValue
@@ -632,15 +622,6 @@ const onSaveDefaults = () => {
 
 const onClearDefaults = () => {
   store.config.studio.defaults = store.config.studio.defaults.filter((d) => d.engine !== engine.value || d.model !== model.value)
-  store.saveSettings()
-}
-
-const toggleFavorite = () => {
-  if (isFavorite.value) {
-    store.config.studio.favorites = store.config.studio.favorites.filter((f) => f.engine !== engine.value || f.model !== model.value)
-  } else {
-    store.config.studio.favorites.push({ engine: engine.value, model: model.value })
-  }
   store.saveSettings()
 }
 

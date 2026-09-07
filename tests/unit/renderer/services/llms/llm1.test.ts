@@ -3,14 +3,13 @@ import { beforeAll, expect, test } from 'vitest'
 import { useWindowMock } from '@tests/mocks/window'
 import { OpenAI, Anthropic, Azure, Ollama, Google, Groq, XAI, Cerebras, MistralAI, DeepSeek, OpenRouter, MultiToolPlugin, ChatModel, defaultCapabilities } from 'multi-llm-ts'
 import { Plugin1, Plugin2, Plugin3 } from '@tests/mocks/plugins'
-import LlmFactory, { favoriteMockEngine } from '@services/llms/llm'
+import LlmFactory from '@services/llms/llm'
 import { store } from '@services/store'
 import defaults from '@root/defaults/settings.json'
 import { PluginsList } from '@services/plugins/plugins'
-import { installMockModels } from '@tests/mocks/llm'
 
 beforeAll(() => {
-  useWindowMock({ customEngine: true, favoriteModels: true })
+  useWindowMock({ customEngine: true })
   store.loadSettings()
 })
 
@@ -32,7 +31,7 @@ test('Custom Engine', () => {
 })
 
 test('Get Engines', () => {
-  expect(llmManager.getChatEngines()).toStrictEqual([favoriteMockEngine, ...llmManager.getStandardEngines(), 'custom1', 'custom2' ])
+  expect(llmManager.getChatEngines()).toStrictEqual([...llmManager.getStandardEngines(), 'custom1', 'custom2' ])
   expect(llmManager.getCustomEngines()).toStrictEqual([ 'custom1', 'custom2'])
 })
 
@@ -194,14 +193,6 @@ test('Ignite Engine', async () => {
   expect(await llmManager.igniteEngine('aws')).toBeInstanceOf(OpenAI)
 })
 
-test('Ignite Favorite Engine', async () => {
-  store.config.llm.favorites = [ { id: '1', engine: 'anthropic', model: 'chat1' } ]
-  store.config.engines[favoriteMockEngine].model.chat = '1'
-  expect(await llmManager.igniteEngine(favoriteMockEngine)).toBeInstanceOf(Anthropic)
-  // fallback
-  store.config.engines[favoriteMockEngine].model.chat = '2'
-  expect(await llmManager.igniteEngine(favoriteMockEngine)).toBeInstanceOf(OpenAI)
-})
 
 test('Ignite Custom Engine OpenAI', async () => {
   const engine = await llmManager.igniteEngine('custom1')
@@ -236,73 +227,11 @@ test('getChatEngineModel', () => {
   store.config.llm.engine = 'mock'
   store.config.engines.mock = { models: { chat: [] }, model: { chat: 'chat1' } }
   expect(llmManager.getChatEngineModel(true)).toStrictEqual({ engine: 'mock', model: 'chat1' })
-  store.config.llm.engine = favoriteMockEngine
-  store.config.engines[favoriteMockEngine] = { models: { chat: [] }, model: { chat: 'mock-chat' } }
-  expect(llmManager.getChatEngineModel(true)).toStrictEqual({ engine: 'mock', model: 'chat' })
 })
 
-test('Favorite engine', () => {
-  expect(llmManager.isFavoriteEngine(favoriteMockEngine)).toBe(true)
-  expect(llmManager.isFavoriteEngine('openai')).toBe(false)
-  expect(llmManager.isFavoriteEngine('mock')).toBe(false)
-})
 
-test('Favorite Ids', () => {
-  expect(llmManager.getFavoriteId('mock', 'chat')).toBe('mock-chat')
-  expect(llmManager.isFavoriteId('mock-chat')).toBe(true)
-  expect(llmManager.isFavoriteId('mocq-chat1')).toBe(false)
-  expect(llmManager.isFavoriteId('mock-chat3')).toBe(false)
-})
 
-test('Favorite models', () => {
 
-  installMockModels()
-
-  expect(llmManager.getChatModels(favoriteMockEngine)).toStrictEqual([
-    { id: 'mock-chat', name: 'mock_label/chat', meta: {}, capabilities: { tools: true, vision: false, reasoning: false, caching: false } },
-    { id: 'mock-vision', name: 'mock_label/vision', meta: {}, capabilities: { tools: true, vision: true, reasoning: false, caching: false } }
-  ])
-
-  expect(llmManager.isFavoriteModel('mock', 'chat')).toBe(true)
-  expect(llmManager.isFavoriteModel('mocq', 'chat')).toBe(false)
-  expect(llmManager.isFavoriteModel('mock', 'chad')).toBe(false)
-
-  expect(llmManager.getFavoriteModel('mock-chat')).toStrictEqual({ engine: 'mock', model: 'chat' })
-  expect(llmManager.getFavoriteModel('mock-vision')).toStrictEqual({ engine: 'mock', model: 'vision' })
-  expect(llmManager.getFavoriteModel('mocq-chat1')).toBeNull()
-  expect(llmManager.getFavoriteModel('mock-chad')).toBeNull()
-
-})
-
-test('Favorites update', () => {
-
-  installMockModels()
-
-  llmManager.addFavoriteModel('mock', 'chat2')
-  expect(llmManager.getChatModels(favoriteMockEngine)).toStrictEqual([
-    { id: 'mock-chat', name: 'mock_label/chat', meta: {}, capabilities: expect.any(Object) },
-    { id: 'mock-vision', name: 'mock_label/vision', meta: {}, capabilities: expect.any(Object) },
-    { id: 'mock-chat2', name: 'mock_label/chat2', meta: {}, capabilities: expect.any(Object) },
-  ])
-
-  llmManager.removeFavoriteModel(favoriteMockEngine, 'mock-chat2')
-  expect(llmManager.getChatModels(favoriteMockEngine)).toStrictEqual([
-    { id: 'mock-chat', name: 'mock_label/chat', meta: {}, capabilities: expect.any(Object) },
-    { id: 'mock-vision', name: 'mock_label/vision', meta: {}, capabilities: expect.any(Object) }
-  ])
-
-  llmManager.removeFavoriteModel('mock', 'vision')
-  expect(llmManager.getChatModels(favoriteMockEngine)).toStrictEqual([
-    { id: 'mock-chat', name: 'mock_label/chat', meta: {}, capabilities: expect.any(Object) }
-  ])
-
-  store.config.llm.engine = favoriteMockEngine
-  llmManager.removeFavoriteModel('mock', 'chat')
-  expect(llmManager.getChatModels(favoriteMockEngine)).toStrictEqual([])
-  expect(store.config.llm.engine).toBe('mock')
-  expect(store.config.engines['mock'].model.chat).toBe('chat')
-  
-})
 
 test('Load tools', async () => {
 

@@ -103,14 +103,14 @@ test('Command localization', async () => {
 })
 
 test('Expert localization', async () => {
-  expect(expertI18n({ id: 'uuid1' } as Expert, 'name')).toBe('mock.experts.experts.uuid1.name')
-  expect(expertI18n({ id: 'uuid1' } as Expert, 'prompt')).toBe('mock.experts.experts.uuid1.prompt')
-  expect(expertI18nDefault({ id: 'uuid1' } as Expert, 'name')).toBe('mock.experts.experts.uuid1.name')
-  expect(expertI18nDefault({ id: 'uuid1' } as Expert, 'prompt')).toBe('mock.experts.experts.uuid1.prompt')
+  expect(expertI18n({ id: 'uuid1' } as Expert, 'name')).toBe('')
+  expect(expertI18n({ id: 'uuid1' } as Expert, 'prompt')).toBe('')
+  expect(expertI18nDefault({ id: 'uuid1' } as Expert, 'name')).toBe('')
+  expect(expertI18nDefault({ id: 'uuid1' } as Expert, 'prompt')).toBe('')
   expect(expertI18n({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'name')).toBe('Name')
   expect(expertI18n({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'prompt')).toBe('Prompt')
-  expect(expertI18nDefault({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'name')).toBe('mock.experts.experts.uuid1.name')
-  expect(expertI18nDefault({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'prompt')).toBe('mock.experts.experts.uuid1.prompt')
+  expect(expertI18nDefault({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'name')).toBe('Name')
+  expect(expertI18nDefault({ id: 'uuid1', 'name': 'Name', prompt: 'Prompt' } as Expert, 'prompt')).toBe('Prompt')
 })
 
 test('Country code to Name', async () => {

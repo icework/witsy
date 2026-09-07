@@ -9,7 +9,6 @@ import { store } from '@services/store'
 import Prompt from '@components/Prompt.vue'
 import Chat from '@models/chat'
 import Attachment from '@models/attachment'
-import { getLlmLocale } from '@services/i18n'
 import Dialog from '@renderer/utils/dialog'
 
 enableAutoUnmount(afterAll)
@@ -71,7 +70,7 @@ let chat: Chat|null = null
 
 beforeAll(async () => {
   useBrowserMock()
-  useWindowMock({ favoriteModels: true })
+  useWindowMock()
   store.isFeatureEnabled = () => true
   store.loadExperts()
   store.loadCommands()
@@ -614,41 +613,7 @@ test('History navigation with Shift forces navigation from anywhere', async () =
 
 })
 
-test('Selects instructions', async () => {
-  await wrapper.find('.prompt-menu').trigger('click')
-  const menu = wrapper.findComponent({ name: 'ContextMenuPlus' })
-  await menu.find('.instructions').trigger('click')
-  // expect(menu.findAll('.filter-input').length).toBe(1)
-  expect(menu.findAll('.item').length).toBe(8)
-  await menu.find('.item:nth-child(1)').trigger('click')
-  expect(wrapper.vm.instructions).toBe(null)
-  
-  await wrapper.find('.prompt-menu').trigger('click')
-  await wrapper.find('.instructions').trigger('click')
-  const menu2 = wrapper.find('.context-menu')
-  await menu2.find('.item:nth-child(3)').trigger('click')
-  expect(wrapper.vm.instructions).toStrictEqual({
-    id: 'structured',
-    label: 'settings.llm.instructions.structured',
-    instructions: 'instructions.chat.structured_default'
-  })
-})
 
-test('Selects instructions based on chat locale', async () => {
-  wrapper.vm.chat.locale = 'fr-FR'
-  
-  await wrapper.find('.prompt-menu').trigger('click')
-  const menu = wrapper.findComponent({ name: 'ContextMenuPlus' })
-  await menu.find('.instructions').trigger('click')
-  
-  await menu.find('.item:nth-child(4)').trigger('click')
-  expect(wrapper.vm.instructions).toStrictEqual({
-    id: 'playful',
-    label: 'settings.llm.instructions.playful',
-    instructions: 'instructions.chat.playful_fr-FR'
-  })
-  expect(getLlmLocale()).toBe('default')
-})
 
 test('Selects expert', async () => {
   // Open expert menu
@@ -814,14 +779,6 @@ test('PromptFeature component displays for active docrepos', async () => {
   expect(docrepoFeature).toBeTruthy()
 })
 
-test('PromptFeature component displays for active instructions', async () => {
-  wrapper.vm.instructions = { id: 'structured', label: 'Structured', instructions: 'test' }
-  await wrapper.vm.$nextTick()
-  
-  const features = wrapper.findAllComponents({ name: 'PromptFeature' })
-  const instructionsFeature = features.find(f => f.props('label') === 'Structured')
-  expect(instructionsFeature).toBeTruthy()
-})
 
 test('PromptFeature component displays for active deep research', async () => {
   wrapper.vm.deepResearchActive = true
@@ -836,7 +793,6 @@ test('Clear functions work correctly', async () => {
   // Set up test data
   wrapper.vm.expert = store.experts[0]
   wrapper.vm.docrepos = ['uuid1']
-  wrapper.vm.instructions = { id: 'structured', label: 'Structured', instructions: 'test' }
   wrapper.vm.deepResearchActive = true
   await wrapper.vm.$nextTick()
 
@@ -848,36 +804,11 @@ test('Clear functions work correctly', async () => {
   wrapper.vm.clearDocRepos()
   expect(wrapper.vm.docrepos).toStrictEqual([])
 
-  // Test clearInstructions
-  wrapper.vm.clearInstructions()
-  expect(wrapper.vm.instructions).toBeNull()
-
   // Test clearDeepResearch
   wrapper.vm.clearDeepResearch()
   expect(wrapper.vm.deepResearchActive).toBe(false)
 })
 
-test('matchInstructions function works correctly', () => {
-  // Test with null/undefined
-  expect(wrapper.vm.matchInstructions()).toBeNull()
-  expect(wrapper.vm.matchInstructions('')).toBeNull()
-  
-  // Test with standard instruction
-  const standardResult = wrapper.vm.matchInstructions('instructions.chat.structured_default')
-  expect(standardResult).toEqual({
-    id: 'structured',
-    label: 'settings.llm.instructions.structured',
-    instructions: 'instructions.chat.structured_default'
-  })
-  
-  // Test with custom instruction (fallback)
-  const customResult = wrapper.vm.matchInstructions('Some custom text')
-  expect(customResult).toEqual({
-    id: 'custom',
-    label: 'Custom',
-    instructions: 'Some custom text'
-  })
-})
 
 test('matchDocRepos function works correctly', async () => {
   // Load docrepos first
@@ -926,48 +857,7 @@ test('Model menu button displays and opens menu', async () => {
   expect(wrapper.vm.showModelMenu).toBe(true)
 })
 
-test('Adds to favorite', async () => {
 
-  wrapper.vm.chat.engine = 'mock'
-  wrapper.vm.chat.model = 'chat2'
-  await wrapper.vm.$nextTick()
-
-  // Find buttons by name attribute
-  const addButton = wrapper.find('[name="addToFavorites"]')
-  const removeButton = wrapper.find('[name="removeFavorite"]')
-  
-  // Should have add button but not remove button
-  expect(addButton.exists()).toBe(true)
-  expect(removeButton.exists()).toBe(false)
-
-  // Click the add button
-  await addButton.trigger('click')
-  
-  // Should be added to favorites in store
-  expect(store.config.llm.favorites).toHaveLength(3)
-  expect(store.config.llm.favorites[2].id).toBe('mock-chat2')
-})
-
-test('Removes from favorites', async () => {
-
-  wrapper.vm.chat.engine = 'mock'
-  wrapper.vm.chat.model = 'chat'
-  await wrapper.vm.$nextTick()
-  
-  // Find buttons by name attribute
-  const addButton = wrapper.find('[name="addToFavorites"]')
-  const removeButton = wrapper.find('[name="removeFavorite"]')
-  
-  // Should have remove button but not add button
-  expect(removeButton.exists()).toBe(true)
-  expect(addButton.exists()).toBe(false)
-
-  // Click the remove button
-  await removeButton.trigger('click')
-
-  // Should be removed from favorites in store
-  expect(store.config.llm.favorites).toHaveLength(1)
-})
 
 test('handleManageDocRepo opens docrepo settings', async () => {
   // Open prompt menu first
@@ -1489,25 +1379,7 @@ test('onAttach shows error for unsupported file format', async () => {
   expect(Dialog.alert).toHaveBeenCalled()
 })
 
-test('Shortcut Alt+1 selects first favorite model', async () => {
-  // favorites are set in window mock
-  const event = new KeyboardEvent('keydown', { key: '1', keyCode: 49, altKey: true })
-  document.dispatchEvent(event)
-  await wrapper.vm.$nextTick()
 
-  // The shortcut should call setChatModel
-  expect(window.api.config.save).toHaveBeenCalled()
-})
-
-test('Shortcut Alt+0 selects 10th favorite model (index 9)', async () => {
-  // Alt+0 maps to index 9
-  const event = new KeyboardEvent('keydown', { key: '0', keyCode: 48, altKey: true })
-  document.dispatchEvent(event)
-  await wrapper.vm.$nextTick()
-
-  // With only 2 favorites, this should not trigger anything
-  // The check in onShortcutDown will return early
-})
 
 test('Shortcut without Alt key does nothing', async () => {
   vi.clearAllMocks()
@@ -1701,22 +1573,6 @@ test('exposed sendPrompt triggers onSendPrompt', async () => {
   expect(wrapper.emitted<any[]>().prompt).toBeTruthy()
 })
 
-test('handlePromptMenuInstructions with custom instruction', async () => {
-  // Add custom instruction to store
-  store.config.llm.customInstructions = [
-    { id: 'custom1', label: 'Custom Label', instructions: 'Custom instructions text' }
-  ]
-
-  // Call handler with custom: prefix
-  wrapper.vm.handlePromptMenuInstructions('custom:custom1')
-  await wrapper.vm.$nextTick()
-
-  expect(wrapper.vm.instructions).toEqual({
-    id: 'custom1',
-    label: 'Custom Label',
-    instructions: 'Custom instructions text'
-  })
-})
 
 test('onConversationMenu opens menu when conversations enabled', async () => {
   const wrapperConvo: VueWrapper<any> = mount(Prompt, { ...stubTeleport, props: { chat: chat, enableConversations: true, enableTools: false } })
@@ -1781,20 +1637,6 @@ test('handleConversationClick with null action stops conversation', async () => 
   expect(wrapper.emitted('conversation-mode').at(-1)).toEqual(['off'])
 })
 
-test('matchInstructions returns custom instruction when matching', () => {
-  // Add custom instruction to store
-  store.config.llm.customInstructions = [
-    { id: 'my-custom', label: 'My Custom', instructions: 'These are my custom instructions' }
-  ]
-
-  const result = wrapper.vm.matchInstructions('These are my custom instructions')
-
-  expect(result).toEqual({
-    id: 'my-custom',
-    label: 'My Custom',
-    instructions: 'These are my custom instructions'
-  })
-})
 
 test('defaultPrompt returns correct placeholder for auto mode after send', async () => {
   const wrapperAuto = mount(Prompt, { ...stubTeleport, props: { chat: chat, conversationMode: 'auto', enableTools: false } })
@@ -1955,4 +1797,49 @@ test('onDragLeave handles special DIV relatedTarget case', () => {
 
   // Should still be true because of the special DIV case
   expect(wrapper.vm.isDragOver).toBe(true)
+})
+
+
+test('Model selection has no favorites actions or Alt+number shortcut', async () => {
+  expect(wrapper.find('[name="addToFavorites"]').exists()).toBe(false)
+  expect(wrapper.find('[name="removeFavorite"]').exists()).toBe(false)
+  const engine = store.config.llm.engine
+  const models = JSON.stringify(store.config.engines)
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: '1', code: 'Digit1', altKey: true, bubbles: true }))
+  await wrapper.vm.$nextTick()
+  expect(store.config.llm.engine).toBe(engine)
+  expect(JSON.stringify(store.config.engines)).toBe(models)
+})
+
+test.each(['screenshot', 'text'])('Requests %s context from the plus menu', async (kind) => {
+  await wrapper.setProps({ enableContext: true })
+  await wrapper.find('.prompt-menu').trigger('click')
+  const item = wrapper.find(`.context-${kind}`)
+  expect(item.exists()).toBe(true)
+  await item.trigger('click')
+  expect(wrapper.emitted('context-requested')).toEqual([[kind]])
+  expect(wrapper.find('.context-menu').exists()).toBe(false)
+})
+
+test('Context actions are unavailable outside chat and disabled while busy', async () => {
+  await wrapper.find('.prompt-menu').trigger('click')
+  expect(wrapper.find('.context-screenshot').exists()).toBe(false)
+  expect(wrapper.find('.context-text').exists()).toBe(false)
+  await wrapper.setProps({ enableContext: true, contextDisabled: true })
+  for (const kind of ['screenshot', 'text']) {
+    const item = wrapper.find(`.context-${kind}`)
+    expect(item.classes()).toContain('disabled')
+    await item.trigger('click')
+  }
+  expect(wrapper.emitted('context-requested')).toBeUndefined()
+})
+
+
+test('Plus menu omits Writing Style and sending preserves agent instructions', async () => {
+  await wrapper.setProps({ chat: Object.assign(new Chat(), { instructions: 'Agent instructions' }) })
+  await wrapper.find('.prompt-menu').trigger('click')
+  expect(wrapper.find('.context-menu .instructions').exists()).toBe(false)
+  await wrapper.find('.input textarea').setValue('Hello')
+  await wrapper.find('.send-stop').trigger('click')
+  expect(wrapper.emitted('prompt')?.[0]?.[0]).toEqual(expect.objectContaining({ instructions: 'Agent instructions' }))
 })

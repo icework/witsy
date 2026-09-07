@@ -17,7 +17,7 @@ import LogoDeepSeek from '@assets/deepseek.svg?component'
 import LogoElevenLabs from '@assets/elevenlabs.svg?component'
 import LogoFalai from '@assets/falai.svg?component'
 import LogoFireworks from '@assets/fireworks.svg?component'
-import LlmFactory, { favoriteMockEngine } from '@services/llms/llm'
+import LlmFactory from '@services/llms/llm'
 import { store } from '@services/store'
 import { CustomEngineConfig } from 'types/config'
 import { computed } from 'vue'
@@ -34,7 +34,6 @@ import LogoOpenAI from '@assets/openai.svg?component'
 import LogoOpenRouter from '@assets/openrouter.svg?component'
 import LogoReplicate from '@assets/replicate.svg?component'
 import LogoXAI from '@assets/xai.svg?component'
-import { BookHeartIcon } from 'lucide-vue-next'
 
 const llmManager = LlmFactory.manager(store.config)
 
@@ -85,7 +84,6 @@ const props = defineProps({
 })
 
 const logo = computed(() => {
-  if (props.engine == favoriteMockEngine) return BookHeartIcon
   if (pngLogos[props.engine]) return pngLogos[props.engine]
   if (logos[props.engine]) return logos[props.engine]
   if (llmManager.isCustomEngine(props.engine)) {
@@ -107,7 +105,6 @@ const label = computed(() => {
 })
 
 const klass = computed(() => {
-  if (props.engine == favoriteMockEngine) return 'favorite'
   if (logos[props.engine]) return props.engine
   if (llmManager.isCustomEngine(props.engine)) {
     const engineConfig = store.config?.engines?.[props.engine] as CustomEngineConfig

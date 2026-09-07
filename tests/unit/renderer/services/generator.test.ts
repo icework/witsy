@@ -198,83 +198,31 @@ test('Generator works without abortSignal (optional)', async () => {
 // Conversation Management Tests
 // ============================================================================
 
-test('Generator getConversation with length 1', async () => {
+test('Generator keeps history beyond the former 20-round limit', async () => {
   const generator = new Generator(store.config)
-  store.config.llm.conversationLength = 1
-
-  const messages = [
-    new Message('system', 'System'),
-    new Message('user', 'Hello 1'),
-    new Message('assistant', 'Response 1'),
-    new Message('user', 'Hello 2'),
-    new Message('assistant', 'Response 2'),
-  ]
+  const messages = [new Message('system', 'System instructions')]
+  for (let i = 0; i < 30; i++) {
+    messages.push(new Message('user', `Question ${i}`), new Message('assistant', `Answer ${i}`))
+  }
+  messages.push(new Message('user', 'Current question'), new Message('assistant', ''))
 
   const conversation = await generator.getConversation(messages)
 
-  // getConversation excludes last message with slice(-conversationLength * 2, -1)
-  // With length=1, it gets last 2 messages (1 pair) excluding the very last
-  expect(conversation).toHaveLength(2) // system + 'Hello 2' (excludes 'Response 2')
-  expect(conversation.map((m: Message) => m.role)).toEqual(['system', 'user'])
-  expect(conversation[1].content).toBe('Hello 2')
+  expect(conversation).toHaveLength(62)
+  expect(conversation).toEqual(messages.slice(0, -1))
+  expect(conversation[1].content).toBe('Question 0')
+  expect(conversation.at(-1).content).toBe('Current question')
+  expect(messages).toHaveLength(63)
 })
 
-test('Generator getConversation with length 2', async () => {
+test('Generator preserves system instructions and excludes only the response placeholder', async () => {
   const generator = new Generator(store.config)
-  store.config.llm.conversationLength = 2
-
   const messages = [
-    new Message('system', 'System'),
-    new Message('user', 'Hello 1'),
-    new Message('assistant', 'Response 1'),
-    new Message('user', 'Hello 2'),
-    new Message('assistant', 'Response 2'),
+    new Message('system', 'System instructions'),
+    new Message('user', 'Hello'),
+    new Message('assistant', ''),
   ]
-
-  const conversation = await generator.getConversation(messages)
-
-  // With length=2, it gets last 4 messages (2 pairs) excluding the very last
-  expect(conversation).toHaveLength(4) // system + last 3 chat messages
-  expect(conversation.map((m: Message) => m.role)).toEqual(['system', 'user', 'assistant', 'user'])
-})
-
-test('Generator getConversation preserves system message', async () => {
-  const generator = new Generator(store.config)
-  store.config.llm.conversationLength = 1
-
-  const messages = [
-    new Message('system', 'Important system instructions'),
-    new Message('user', 'Hello 1'),
-    new Message('assistant', 'Response 1'),
-    new Message('user', 'Hello 2'),
-    new Message('assistant', 'Response 2'),
-  ]
-
-  const conversation = await generator.getConversation(messages)
-
-  expect(conversation[0].role).toBe('system')
-  expect(conversation[0].content).toBe('Important system instructions')
-})
-
-test('Generator getConversation with more messages than length', async () => {
-  const generator = new Generator(store.config)
-  store.config.llm.conversationLength = 1
-
-  const messages = [
-    new Message('system', 'System'),
-    new Message('user', 'Hello 1'),
-    new Message('assistant', 'Response 1'),
-    new Message('user', 'Hello 2'),
-    new Message('assistant', 'Response 2'),
-    new Message('user', 'Hello 3'),
-    new Message('assistant', 'Response 3'),
-  ]
-
-  const conversation = await generator.getConversation(messages)
-
-  // With length=1, should only include system + last pair (excluding very last message)
-  expect(conversation).toHaveLength(2) // system + 'Hello 3' (excludes 'Response 3')
-  expect(conversation[1].content).toBe('Hello 3')
+  expect(await generator.getConversation(messages)).toEqual([messages[0], messages[1]])
 })
 
 // ============================================================================

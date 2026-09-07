@@ -14,6 +14,7 @@ export interface ChatAgent {
 export interface ScreenshotState {
   capturing: boolean
   compact: boolean
+  quickChatRequest?: { id: string; fresh: boolean }
   image?: string
   error?: string
   chatId?: string
@@ -37,6 +38,7 @@ export interface ContextWorkflow {
 }
 export interface ScreenshotSettings { accelerator: string; agentId?: string }
 export interface ChatAgentAPI {
+  openQuickChat(fresh?: boolean): Promise<void>
   list(): Promise<ChatAgent[]>
   save(agent: ChatAgent): Promise<ChatAgent>
   remove(id: string): Promise<void>

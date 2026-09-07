@@ -55,6 +55,14 @@
         <input type="checkbox" id="keep-running" v-model="keepRunning" @change="save" />
         <label for="keep-running">{{ t('settings.general.keepInStatusBar') }}</label>
       </div>
+      <div class="form-field backups">
+        <label>{{ t('backup.settingsTitle') }}</label>
+        <p class="backup-description">{{ t('backup.settingsHelp') }}</p>
+        <div class="form-subgroup backup-actions">
+          <button type="button" name="export-backup" @click="exportBackup"><DownloadIcon />{{ t('menu.file.backupExport') }}</button>
+          <button type="button" name="import-backup" @click="importBackup"><UploadIcon />{{ t('menu.file.backupImport') }}</button>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -65,6 +73,10 @@ import LangSelect from '@components/LangSelect.vue'
 import { t } from '@services/i18n'
 import { store } from '@services/store'
 import { ref } from 'vue'
+import { DownloadIcon, UploadIcon } from 'lucide-vue-next'
+
+const exportBackup = () => { window.api.backup.export() }
+const importBackup = () => { window.api.backup.import() }
 
 const appearance = ref(null)
 const darkTint = ref(null)
@@ -161,4 +173,10 @@ dialog.settings .sp-main {
   border-radius: 8px;
 }
 
+.form .form-field.backups { box-sizing: border-box; padding: var(--space-12); margin-top: var(--space-12); gap: var(--space-8); border: var(--space-px) solid var(--border-color); border-radius: var(--radius-xl); background: var(--background-color-light); }
+.backup-description { margin: 0; font-size: var(--font-size-13); line-height: 1.65; color: var(--faded-text-color); }
+.backup-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.backup-actions button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-4); margin: 0; border-radius: var(--radius-lg); min-height: var(--space-20); }
+.backup-actions svg { width: var(--icon-md); height: var(--icon-md); }
+.appearance .form-subgroup { flex-wrap: wrap; gap: var(--space-12); justify-content: flex-start; }
 </style>

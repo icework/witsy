@@ -17,7 +17,7 @@ vi.mock('electron', () => ({
 vi.mock('@main/context_selection', () => ({ readSelectedContext: vi.fn().mockResolvedValue('A controlled selection') }))
 import { readSelectedContext } from '@main/context_selection'
 import { desktopCapturer } from 'electron'
-import { captureSelectedText, captureScreenshot, cropBounds, finishScreenshot, saveScreenshotSettings, screenshotSource, screenshotState, updateScreenshot } from '@main/screenshot_action'
+import { openQuickChat, captureSelectedText, captureScreenshot, cropBounds, finishScreenshot, saveScreenshotSettings, screenshotSource, screenshotState, updateScreenshot } from '@main/screenshot_action'
 beforeEach(() => { state.home = fs.mkdtempSync(path.join(os.tmpdir(), 'summon-action-test-')); image.crop.mockReturnValue(image); vi.clearAllMocks(); updateScreenshot({ dismiss: true, busy: false, expand: true }) })
 afterEach(() => fs.rmSync(state.home, { recursive: true, force: true }))
 test('cancel does not create an image and restores hidden windows', async () => {
@@ -88,4 +88,31 @@ test('manual text clears workflow defaults and repeated clicks preserve the pend
   updateScreenshot({ manualText: true })
   expect(screenshotState().requestId).toBe(pending.requestId)
   expect(readSelectedContext).toHaveBeenCalledOnce()
+})
+
+
+test('Quick Chat requests resume or new without capturing context or submitting', () => {
+  openQuickChat()
+  const first = screenshotState()
+  expect(first).toMatchObject({ compact: true, quickChatRequest: { fresh: false } })
+  expect(first.image).toBeUndefined()
+  expect(first.contextKind).toBeUndefined()
+  openQuickChat(true)
+  expect(screenshotState().quickChatRequest).toMatchObject({ fresh: true })
+  expect(screenshotState().quickChatRequest.id).not.toBe(first.quickChatRequest.id)
+  expect(desktopCapturer.getSources).not.toHaveBeenCalled()
+  expect(readSelectedContext).not.toHaveBeenCalled()
+})
+
+test('Quick Chat reopening preserves an active run or pending context', () => {
+  openQuickChat()
+  updateScreenshot({ chatId: 'running-chat', busy: true })
+  const request = screenshotState().quickChatRequest
+  openQuickChat(true)
+  expect(screenshotState()).toMatchObject({ chatId: 'running-chat', busy: true, quickChatRequest: request })
+  updateScreenshot({ busy: false })
+  updateScreenshot({ manualText: true })
+  const preview = screenshotState()
+  openQuickChat(true)
+  expect(screenshotState()).toEqual(preview)
 })

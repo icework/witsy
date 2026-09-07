@@ -1,4 +1,3 @@
-export const favoriteMockEngine = '__favorites__' 
 
 export const engineNames: Record<string, string> = {
   'anthropic': 'Anthropic',

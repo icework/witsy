@@ -6,7 +6,6 @@ import path from 'path'
 import { Configuration } from 'types/config'
 import { anyDict } from 'types/index'
 import defaultSettings from '@root/defaults/settings.json'
-import { favoriteMockEngine } from '../renderer/services/llms/llm'
 import Monitor from './monitor'
 
 type ApiKeyEntry = {
@@ -129,6 +128,37 @@ export const loadSettings = (app: App): Configuration => {
     }
   }
 
+  if (jsonConfig.llm && 'conversationLength' in jsonConfig.llm) {
+    delete jsonConfig.llm.conversationLength
+    save = true
+  }
+
+  // Resolve the retired favorites provider before removing its configuration.
+  const legacyFavorites = Array.isArray(jsonConfig.llm?.favorites) ? jsonConfig.llm.favorites : []
+  if (jsonConfig.llm?.engine === '__favorites__') {
+    const selectedId = jsonConfig.engines?.__favorites__?.model?.chat
+    const selected = legacyFavorites.find((entry: { id: string }) => entry.id === selectedId) || legacyFavorites[0]
+    const engine = selected?.engine !== '__favorites__' && jsonConfig.engines?.[selected?.engine]
+      ? selected.engine : defaultSettings.llm.engine
+    jsonConfig.llm.engine = engine
+    if (selected && engine === selected.engine) {
+      jsonConfig.engines[engine].model = { ...jsonConfig.engines[engine].model, chat: selected.model }
+    }
+    save = true
+  }
+  if (jsonConfig.llm && 'favorites' in jsonConfig.llm) {
+    delete jsonConfig.llm.favorites
+    save = true
+  }
+  if (jsonConfig.studio && 'favorites' in jsonConfig.studio) {
+    delete jsonConfig.studio.favorites
+    save = true
+  }
+  if (jsonConfig.engines?.__favorites__) {
+    delete jsonConfig.engines.__favorites__
+    save = true
+  }
+
   // now load engine models
   if (jsonConfig.engines) {
     
@@ -218,11 +248,6 @@ export const saveSettings = (app: App, config: Configuration, always: boolean = 
 
     // save engines configuration separately
     for (const engine of Object.keys(clone.engines)) {
-
-      // skip the favorite mock engine
-      if (engine === favoriteMockEngine) {
-        continue
-      }
 
       // clone user data
       const engineConfig = {

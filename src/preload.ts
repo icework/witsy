@@ -29,6 +29,7 @@ let listenerId = 0
 contextBridge.exposeInMainWorld(
   'api', {
     chatAgents: {
+      openQuickChat: (fresh?: boolean) => ipcRenderer.invoke(IPC.CHAT_AGENT.QUICK_CHAT, fresh),
       list: () => ipcRenderer.invoke(IPC.CHAT_AGENT.LIST),
       workflows: () => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.LIST),
       saveWorkflow: (workflow: ContextWorkflow) => ipcRenderer.invoke(IPC.CONTEXT_WORKFLOW.SAVE, workflow),

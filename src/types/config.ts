@@ -69,7 +69,7 @@ export type GeneralConfig = {
   httpPort?: number
 }
 
-export type FavoriteModel = {
+export type WorkspaceModel = {
   id: string
   engine: string
   model: string
@@ -97,8 +97,6 @@ export type LLMConfig = {
   engine: string
   locale: string
   forceLocale: boolean
-  favorites: FavoriteModel[]
-  conversationLength: number
   imageResize: number
   defaults: ModelDefaults[]
   customInstructions: CustomInstruction[]
@@ -138,6 +136,7 @@ export type AppearanceConfig = {
 }
 
 export type PromptConfig = {
+  defaultAgentId?: string
   engine: string
   model: string
   disableStreaming: boolean
@@ -157,7 +156,6 @@ export type DesignStudioModelDefaults = DesignStudioModel & {
 export type DesignStudioConfig = {
   type: DesignStudioMediaType
   engines: Record<DesignStudioMediaType, string>
-  favorites: DesignStudioModel[]
   defaults: DesignStudioModelDefaults[]
 }
 

@@ -68,7 +68,7 @@ for (let i=1; i<tabs.length; i++) {
 test('Settings General', async () => {
   
   const tab = await switchToTab(wrapper, tabs.indexOf('settingsGeneral'))
-  expect(tab.findAll('.form-field')).toHaveLength(7)
+  expect(tab.findAll('.form-field')).toHaveLength(8)
   expect(tab.findAll('.form-field.localeUI select option')).toHaveLength(3)
   
   // helper
@@ -269,4 +269,13 @@ test('Settings Advanced Image resize none - save', async () => {
 test('Settings Advanced Image resize none - reload', async () => {
   const tab = await switchToTab(wrapper, tabs.indexOf('settingsAdvanced'))
   expect(tab.find<HTMLSelectElement>('.form-field.size select').element.value).toBe('0')
+})
+
+
+test('General settings provides local backup export and import actions', async () => {
+  const tab = await switchToTab(wrapper, tabs.indexOf('settingsGeneral'))
+  await tab.find('[name="export-backup"]').trigger('click')
+  expect(window.api.backup.export).toHaveBeenCalledOnce()
+  await tab.find('[name="import-backup"]').trigger('click')
+  expect(window.api.backup.import).toHaveBeenCalledOnce()
 })

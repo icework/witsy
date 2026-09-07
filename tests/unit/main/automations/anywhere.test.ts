@@ -4,6 +4,8 @@ import { store } from '@services/store'
 import defaults from '@root/defaults/settings.json'
 import PromptAnywhere from '@main/automations/anywhere'
 import * as window from '@main/window'
+import { openQuickChat } from '@main/screenshot_action'
+vi.mock('@main/screenshot_action', () => ({ openQuickChat: vi.fn() }))
 import { Configuration, InstructionsConfig } from '@/types/config'
 
 vi.mock('electron', async() => {
@@ -50,9 +52,10 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-test('Prepare prompt', async () => {
+test('Ordinary Quick Chat opens the shared chat host', async () => {
   await PromptAnywhere.open()
-  expect(window.openPromptAnywhere).toHaveBeenCalledOnce()
+  expect(openQuickChat).toHaveBeenCalledOnce()
+  expect(window.openPromptAnywhere).not.toHaveBeenCalled()
 })
 
 test('Close prompt', async () => {

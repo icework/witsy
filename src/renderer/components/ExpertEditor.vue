@@ -243,10 +243,10 @@ const onSave = (event: Event) => {
   // save it
   emit('expert-modified', {
     id: props.expert.id,
-    name: name.value === expertI18nDefault(props.expert, 'name') ? undefined : name.value,
-    description: description.value === expertI18nDefault(props.expert, 'description') ? undefined : description.value,
+    name: name.value,
+    description: description.value,
     categoryId: categoryId.value || undefined,
-    prompt: prompt.value === expertI18nDefault(props.expert, 'prompt') ? undefined : prompt.value,
+    prompt: prompt.value,
     ...(engine.value?.length && model.value?.length ? { engine: engine.value, model: model.value } : {}),
     docrepos: docrepos.value.length ? docrepos.value : undefined,
     triggerApps: triggerApps.value.map((app) => {

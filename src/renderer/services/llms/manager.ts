@@ -46,7 +46,6 @@ export default class LlmManager extends LlmManagerBase {
     if (engine === 'openai') return llm.OpenAI.isConfigured(this.config.engines.openai)
     if (engine === 'openrouter') return OpenRouter.isConfigured(this.config.engines.openrouter)
     if (engine === 'xai') return llm.XAI.isConfigured(this.config.engines.xai)
-    if (this.isFavoriteEngine(engine)) return true
     if (this.isCustomEngine(engine)) return true
     return false
   }  
@@ -64,7 +63,6 @@ export default class LlmManager extends LlmManagerBase {
     if (engine === 'openai') return llm.OpenAI.isReady(this.config.engines.openai, this.config.engines.openai?.models)
     if (engine === 'openrouter') return OpenRouter.isReady(this.config.engines.openrouter, this.config.engines.openrouter?.models)
     if (engine === 'xai') return llm.XAI.isReady(this.config.engines.xai, this.config.engines.xai?.models)
-    if (this.isFavoriteEngine(engine)) return true
     if (this.isCustomEngine(engine)) return true
     return false
   }
@@ -74,9 +72,7 @@ export default class LlmManager extends LlmManagerBase {
     try {
 
       // super
-      if (this.isFavoriteEngine(engine)) {
-        return this.igniteFavoriteEngine(engine)
-      } else if (this.isCustomEngine(engine)) {
+      if (this.isCustomEngine(engine)) {
         return this.igniteCustomEngine(engine)
       }
 

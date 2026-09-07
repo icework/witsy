@@ -5,7 +5,7 @@ import Dialog from './dialog'
 export type TipId = 
   'engineSelector' | 'modelSelector' | 'conversation' |
   'computerUse' | 'realtime' | 'folderList' |
-  'favoriteModels' | 'pluginsDisabled' | 'folderDefaults' |
+  'pluginsDisabled' | 'folderDefaults' |
   'deepResearchUsage'
 
 type TipHandler = () => Promise<boolean>
@@ -62,7 +62,6 @@ class TipsManager {
       'computerUse': this.showComputerUseWarning,
       'realtime': this.showRealtimeTip,
       'folderList': this.showFolderListTip,
-      'favoriteModels': this.showFavoriteModelsTip,
       'pluginsDisabled': this.showPluginsDisabledTip,
       'folderDefaults': this.showFolderDefaultsTip,
     }
@@ -107,14 +106,6 @@ class TipsManager {
     await Dialog.show({
       title: t('tips.folderList.title'),
       text: t('tips.folderList.text'),
-    })
-    return true
-  }
-
-  showFavoriteModelsTip = async () => {
-    await Dialog.show({
-      title: t('tips.favoriteModels.title'),
-      text: t('tips.favoriteModels.text'),
     })
     return true
   }

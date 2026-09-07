@@ -17,7 +17,6 @@ const listeners: ((signal: string) => void)[] = []
 interface WindowMockOpts {
   dialogResponse?: number
   modelDefaults?: boolean
-  favoriteModels?: boolean
   customEngine?: boolean
   noAdditionalInstructions?: boolean
 }
@@ -31,7 +30,6 @@ const useWindowMock = (opts?: WindowMockOpts) => {
     ...{
       dialogResponse: 0,
       modelDefaults: false,
-      favoriteModels: false,
       customEngine: false
     },
     ...opts
@@ -40,6 +38,7 @@ const useWindowMock = (opts?: WindowMockOpts) => {
   let runAtLogin = false
   window.api = {
     chatAgents: {
+      openQuickChat: vi.fn().mockResolvedValue(undefined),
       list: vi.fn().mockResolvedValue([]), save: vi.fn(), remove: vi.fn(),
       workflows: vi.fn().mockResolvedValue([]), saveWorkflow: vi.fn(), removeWorkflow: vi.fn(), runWorkflow: vi.fn(),
       screenshotSettings: vi.fn().mockResolvedValue({ accelerator: '' }), capture: vi.fn(),
@@ -114,12 +113,6 @@ const useWindowMock = (opts?: WindowMockOpts) => {
       getI18nMessages: vi.fn(() => ({ en: {}, fr: {} })),
       load: vi.fn(() => {
         const config = JSON.parse(JSON.stringify(defaultSettings))
-        if (opts.favoriteModels) {
-          config.llm.favorites = [
-            { id: 'mock-chat', engine: 'mock', model: 'chat' },
-            { id: 'mock-vision', engine: 'mock', model: 'vision' },
-          ]
-        }
         if (opts.noAdditionalInstructions) {
           for (const key of Object.keys(config.llm.additionalInstructions)) {
             config.llm.additionalInstructions[key] = false

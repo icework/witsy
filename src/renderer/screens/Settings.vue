@@ -8,8 +8,6 @@
         <ul>
           <SettingsTab class="general" :title="t('settings.tabs.general')" @change="load(settingsGeneral)" :checked="initialTab == 'general'"><AppWindowMacIcon class="icon" /></SettingsTab>
           <SettingsTab class="sidebar" :title="t('settings.tabs.sidebar')" @change="load(settingsSidebar)" :checked="initialTab == 'sidebar'" v-if="store.isFeatureEnabled('webapps')"><PanelsTopLeftIcon class="icon" /></SettingsTab>
-          <SettingsTab class="llm" :title="t('settings.tabs.llm')" @change="load(settingsLLM)" :checked="initialTab == 'llm'"><BoxIcon class="icon" /></SettingsTab>
-          <SettingsTab class="favorites" :title="t('settings.tabs.favorites')" @change="load(settingsFavorites)" :checked="initialTab == 'favorites'"><StarIcon class="icon" /></SettingsTab>
           <SettingsTab class="chat" :title="t('settings.tabs.chat')" @change="load(settingsChat)"><AppWindowIcon class="icon" /></SettingsTab>
           <SettingsTab class="chatagents" :title="t('chatAgent.settingsTitle')" @change="load(settingsChatAgents)" :checked="initialTab == 'chatagents'"><BrainIcon class="icon" /></SettingsTab>
           <SettingsTab class="contextworkflows" :title="t('contextWorkflow.title')" @change="load(settingsContextWorkflows)" :checked="initialTab == 'contextworkflows'"><WandIcon class="icon" /></SettingsTab>
@@ -29,8 +27,6 @@
     <div class="sp-main">
       <SettingsGeneral ref="settingsGeneral" />
       <SettingsSidebar ref="settingsSidebar" v-if="store.isFeatureEnabled('webapps')" />
-      <SettingsLLM ref="settingsLLM" />
-      <SettingsFavorites ref="settingsFavorites" />
       <SettingsChat ref="settingsChat" />
       <SettingsChatAgents ref="settingsChatAgents" />
       <SettingsContextWorkflows ref="settingsContextWorkflows" />
@@ -49,12 +45,14 @@
 </template>
 
 <script setup lang="ts">
+import '../../../css/agent-settings.css'
+import '../../../css/agent-forms.css'
 
 import useIpcListener from '@composables/ipc_listener'
 import { installTabs, showActiveTab } from '@renderer/utils/tabs'
 import { t } from '@services/i18n'
 import { store } from '@services/store'
-import { AppWindowIcon, AppWindowMacIcon, BadgePlusIcon, BlocksIcon, BoxIcon, BrainIcon, CommandIcon, MicIcon, PanelsTopLeftIcon, StarIcon, TelescopeIcon, WandIcon, ZapIcon } from 'lucide-vue-next'
+import { AppWindowIcon, AppWindowMacIcon, BadgePlusIcon, BlocksIcon, BoxIcon, BrainIcon, CommandIcon, MicIcon, PanelsTopLeftIcon, TelescopeIcon, WandIcon, ZapIcon } from 'lucide-vue-next'
 import { OpenSettingsPayload } from 'types/index'
 import { nextTick, onMounted, PropType, ref, watch } from 'vue'
 import SettingsAdvanced from '../settings/SettingsAdvanced.vue'
@@ -65,9 +63,7 @@ import SettingsRuntimeConnections from '../settings/SettingsRuntimeConnections.v
 import SettingsCommands from '../settings/SettingsCommands.vue'
 import SettingsDeepResearch from '../settings/SettingsDeepResearch.vue'
 import SettingsExperts from '../settings/SettingsExperts.vue'
-import SettingsFavorites from '../settings/SettingsFavorites.vue'
 import SettingsGeneral from '../settings/SettingsGeneral.vue'
-import SettingsLLM from '../settings/SettingsLLM.vue'
 import SettingsModels from '../settings/SettingsModels.vue'
 import SettingsPlugins from '../settings/SettingsPlugins.vue'
 import SettingsSkills from '../settings/SettingsSkills.vue'
@@ -94,8 +90,6 @@ const props = defineProps({
 const tabs = ref<HTMLElement>(null)
 const initialTab = ref('general')
 const settingsGeneral = ref(null)
-const settingsLLM = ref(null)
-const settingsFavorites = ref(null)
 const settingsChat = ref(null)
 const settingsChatAgents = ref(null)
 const settingsContextWorkflows = ref(null)
@@ -115,8 +109,6 @@ const activeTab = ref(null)
 
 const settings = [
   settingsGeneral,
-  settingsLLM,
-  settingsFavorites,
   settingsChat,
   settingsChatAgents,
   settingsContextWorkflows,

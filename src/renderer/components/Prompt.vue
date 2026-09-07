@@ -21,12 +21,6 @@
         <PlusIcon class="icon" />
       </ButtonIcon>
       
-      <PromptFeature
-        v-if="instructions"
-        :icon="FeatherIcon"
-        :label="instructions.label"
-        @clear="clearInstructions"
-      />
       
       <PromptFeature
         v-if="expert"
@@ -79,18 +73,6 @@
         <div class="model-name">{{ modelName }}</div>
         <ChevronDownIcon class="icon caret" />
       </div>
-
-      <template v-if="store.isFeatureEnabled('favorites') && chat">
-
-        <ButtonIcon name="addToFavorites" v-if="!isFavoriteModel" @click="addToFavorites" v-tooltip="{ text: t('common.favorites.add'), position: 'top' }">
-          <HeartPlusIcon class="icon add-favorite" />
-        </ButtonIcon>
-
-        <ButtonIcon name="removeFavorite" v-else @click="removeFavorite" v-tooltip="{ text: t('common.favorites.remove'), position: 'top' }">
-          <HeartMinusIcon class="icon remove-favorite" />
-        </ButtonIcon>
-
-      </template>
 
       <ButtonIcon class="send-stop" @click="(promptingState !== 'idle' || isGenerating) ? onStopPrompting() : onSendPrompt()">
         <XIcon class="icon stop" :class="{ canceling: promptingState === 'canceling' }" v-if="promptingState !== 'idle' || isGenerating" />
@@ -152,11 +134,13 @@
       v-if="showPromptMenu"
       :anchor="`#prompt-menu-${uniqueId}`"
       :position="menusPosition"
+      :enable-context="enableContext"
+      :context-disabled="contextDisabled || isGenerating"
+      @context-requested="emit('context-requested', $event)"
       :enable-tools="enableTools"
       :enable-experts="enableExperts"
       :enable-skills="true"
       :enable-doc-repo="enableDocRepo"
-      :enable-instructions="enableInstructions"
       :enable-attachments="enableAttachments"
       :enable-deep-research="enableDeepResearch"
       :tool-selection="chat.tools"
@@ -168,7 +152,6 @@
       @manage-skills="handleManageSkills"
       @doc-repos-changed="handleDocReposChanged"
       @manage-doc-repo="handleManageDocRepo"
-      @instructions-selected="handlePromptMenuInstructions"
       @select-all-tools="handleSelectAllTools"
       @unselect-all-tools="handleUnselectAllTools"
       @select-all-plugins="handleSelectAllPlugins"
@@ -207,12 +190,12 @@ import Dialog from '@renderer/utils/dialog'
 import ImageUtils from '@renderer/utils/image_utils'
 import useTipsManager from '@renderer/utils/tips_manager'
 import * as ts from '@renderer/utils/tool_selection'
-import { categoryI18n, commandI18n, expertI18n, getLlmLocale, i18nInstructions, setLlmLocale, t } from '@services/i18n'
-import LlmFactory, { favoriteMockEngine, ILlmManager } from '@services/llms/llm'
+import { categoryI18n, commandI18n, expertI18n, t } from '@services/i18n'
+import LlmFactory, { ILlmManager } from '@services/llms/llm'
 import { store } from '@services/store'
-import { ArrowUpIcon, BoxIcon, BrainIcon, ChevronDownIcon, CommandIcon, FeatherIcon, FolderIcon, HeartMinusIcon, HeartPlusIcon, LightbulbIcon, MicIcon, PlusIcon, TelescopeIcon, XIcon, ZapIcon } from 'lucide-vue-next'
+import { ArrowUpIcon, BoxIcon, BrainIcon, ChevronDownIcon, CommandIcon, FolderIcon, LightbulbIcon, MicIcon, PlusIcon, TelescopeIcon, XIcon, ZapIcon } from 'lucide-vue-next'
 import { extensionToMimeType, mimeTypeToExtension } from 'multi-llm-ts'
-import { Command, CustomInstruction, Expert, MessageExecutionMode } from 'types/index'
+import { Command, Expert, MessageExecutionMode } from 'types/index'
 import { McpServerWithTools, McpTool } from 'types/mcp'
 import { DocumentBase } from 'types/rag'
 import { Skill } from 'types/skills'
@@ -265,11 +248,9 @@ const props = defineProps({
     required: false,
     default: t('prompt.placeholders.default')
   },
+  enableContext: { type: Boolean, default: false },
+  contextDisabled: { type: Boolean, default: false },
   enableModelSelection: {
-    type: Boolean,
-    default: true
-  },
-  enableInstructions: {
     type: Boolean,
     default: true
   },
@@ -338,7 +319,6 @@ let userStoppedDictation = false
 const uniqueId = ref(crypto.randomUUID())
 
 const prompt = ref('')
-const instructions = ref<CustomInstruction>(undefined)
 const expert = ref<Expert>(undefined)
 const skill = ref<Skill>(undefined)
 const command = ref<Command>(undefined)
@@ -358,7 +338,7 @@ const isDragOver = ref(false)
 const commandsAnchor = ref('.prompt .textarea-wrapper')
 
 const emit = defineEmits([
-  'set-engine-model', 'tools-updated',
+  'context-requested', 'set-engine-model', 'tools-updated',
   'prompt', 'run-agent', 'stop',
   'conversation-mode'
 ])
@@ -462,7 +442,6 @@ const modelName = computed(() => {
   return model?.name || props.chat?.model || 'Select Model'
 })
 
-const isFavoriteModel = computed(() => llmManager.isFavoriteModel(props.chat?.engine, props.chat?.model))
 
 // Escape key to abort generation (document-level)
 const onEscapeKey = (event: KeyboardEvent) => {
@@ -477,7 +456,6 @@ onMounted(() => {
 
   // event
   onIpcEvent('docrepo-modified', loadDocRepos)
-  onDomEvent(document, 'keydown', onShortcutDown)
   onDomEvent(document, 'keydown', onEscapeKey)
   autoGrow(input.value)
 
@@ -488,60 +466,9 @@ onMounted(() => {
   // reset doc repo and expert
   watch(() => props.chat || {}, () => {
     docrepos.value = matchDocRepos(props.chat?.docrepos)
-    instructions.value = matchInstructions(props.chat?.instructions)
   }, { immediate: true })
 
 })
-
-const onShortcutDown = (ev: KeyboardEvent) => {
-  const favorites = llmManager.getChatModels(favoriteMockEngine)
-  if (!favorites.length) return
-  if (!ev.altKey) return
-  let index = ev.keyCode - 49
-  if (index === -1) index = 9
-  if (index < 0 || index > favorites.length-1) return
-  llmManager.setChatModel(favoriteMockEngine, favorites[index].id)
-}
-
-const matchInstructions = (instructions?: string): CustomInstruction|null => {
-
-  // if no text
-  if (!instructions) {
-    return null
-  }
-
-  // First, check if it matches a custom instruction
-  const customInstructions = store.config.llm.customInstructions || []
-  for (const custom of customInstructions) {
-    if (custom.instructions === instructions) {
-      return {
-        id: custom.id,
-        label: custom.label,
-        instructions: custom.instructions
-      }
-    }
-  }
-
-  // Second, check if it matches a standard instruction
-  const instructionIds = ['standard', 'structured', 'playful', 'empathic', 'uplifting', 'reflective', 'visionary']
-  for (const instructionId of instructionIds) {
-    const standardInstructions = i18nInstructions(store.config, `instructions.chat.${instructionId}`)
-    if (standardInstructions === instructions) {
-      return {
-        id: instructionId,
-        label: t(`settings.llm.instructions.${instructionId}`) || instructionId,
-        instructions: instructions
-      }
-    }
-  }
-
-  // Default: return as custom instruction if no match found
-  return {
-    id: 'custom',
-    label: 'Custom',
-    instructions: instructions
-  }
-}
 
 const matchDocRepos = (docRepoIds?: string[]): string[] => {
   if (!docRepoIds?.length) return []
@@ -645,7 +572,7 @@ const onSendPrompt = () => {
   nextTick(() => {
     autoGrow(input.value)
     const sendPromptParams: SendPromptParams = {
-      instructions: instructions.value?.instructions,
+      instructions: props.chat?.instructions,
       prompt: message,
       attachments: attachments.value,
       docrepos: docrepos.value,
@@ -1123,56 +1050,6 @@ const setDocRepos = (uuids: string[]) => {
   }
 }
 
-const handlePromptMenuInstructions = (instructionId: string) => {
-
-  if (instructionId === 'null') {
-
-    instructions.value = null
-
-
-  } else if (instructionId.startsWith('custom:')) {
-
-    // Handle custom instructions
-    const customId = instructionId.replace('custom:', '')
-    const customInstruction = store.config.llm.customInstructions?.find(c => c.id === customId)
-    if (customInstruction) {
-      instructions.value = {
-        id: customInstruction.id,
-        label: customInstruction.label,
-        instructions: customInstruction.instructions
-      }
-    }
-  } else {
-
-    // Handle default instructions
-    // use chat llm locale if set
-    let llmLocale = null
-    const forceLocale = store.config.llm.forceLocale
-    if (props.chat?.locale) {
-      llmLocale = getLlmLocale()
-      setLlmLocale(props.chat.locale)
-      store.config.llm.forceLocale = true
-    }
-
-    // get the instructions
-    instructions.value = {
-      id: instructionId,
-      label: t(`settings.llm.instructions.${instructionId}`) || instructionId,
-      instructions: i18nInstructions(store.config, `instructions.chat.${instructionId}`)
-    }
-
-    // restore
-    if (llmLocale) {
-      setLlmLocale(llmLocale)
-      store.config.llm.forceLocale = forceLocale
-    }
-  }
-  if (props.chat) {
-    props.chat.instructions = instructions.value?.instructions
-  }
-  closePromptMenu()
-}
-
 const handleAllPluginsToggle = async () => {
   props.chat.tools = await ts.handleAllPluginsToggle(props.chat.tools)
   emit('tools-updated', props.chat.tools)
@@ -1428,19 +1305,6 @@ const autoGrow = (element: HTMLElement) => {
   }
 }
 
-const addToFavorites = () => {
-  if (props.chat) {
-    llmManager.addFavoriteModel(props.chat.engine, props.chat.model)
-    tipsManager.showTip('favoriteModels')
-  }
-}
-
-const removeFavorite = () => {
-  if (props.chat) {
-    llmManager.removeFavoriteModel(props.chat.engine, props.chat.model)
-  }
-}
-
 const clearExpert = () => {
   expert.value = null
 }
@@ -1451,10 +1315,6 @@ const clearSkill = () => {
 
 const clearDocRepos = () => {
   setDocRepos([])
-}
-
-const clearInstructions = () => {
-  instructions.value = null
 }
 
 const clearDeepResearch = () => {
@@ -1469,6 +1329,13 @@ const getDocRepoName = (uuid: string) => {
 defineExpose({
 
   getPrompt: () => prompt.value,
+  getDraft: () => {
+    const draft = new Message('user', prompt.value)
+    draft.attachments = [...attachments.value]
+    draft.expert = expert.value
+    draft.skill = skill.value
+    return draft
+  },
   focus: () => input.value.focus(),
 
   setExpert,
@@ -1511,13 +1378,17 @@ defineExpose({
 
 .prompt {
   
-  padding: 1rem;
+  container: chat-composer / inline-size;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8);
   display: flex;
   flex-direction: column;
   align-items: stretch;
   border: 1px solid var(--prompt-input-border-color);
-  border-radius: 1rem;
+  border-radius: var(--radius-2xl);
   background-color: var(--prompt-input-bg-color);
+
+  &:focus-within { border-color: color-mix(in srgb, var(--highlight-color) 45%, var(--prompt-input-border-color)); }
 
   &.drag-over {
     border: 1px dashed var(--highlight-color);
@@ -1534,9 +1405,6 @@ defineExpose({
       color: red;
     }
 
-    &.remove-favorite {
-      color: var(--color-error);
-    }
 
   }
 
@@ -1674,12 +1542,22 @@ defineExpose({
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
     margin-top: 0.25rem;
 
     &:not(:has(*)) {
       display: none;
+    }
+
+    &:has(.chat-configuration) > .flex-push {
+      display: none;
+    }
+
+    .send-stop {
+      flex-shrink: 0;
+      margin-left: auto;
     }
 
     .prompt-menu {
@@ -1719,6 +1597,10 @@ defineExpose({
         
     }
 
+    &:has(.chat-configuration) > .flex-push {
+      display: none;
+    }
+
     .send-stop {
       
       width: 2rem;
@@ -1754,11 +1636,6 @@ defineExpose({
       height: 1rem;
     }
 
-    .icon.instructions {
-      transform: scaleY(110%);
-      margin-top: 1px;
-      margin-right: 4px;
-    }
 
     .icon.experts {
       padding-left: 2px;
@@ -1820,4 +1697,8 @@ defineExpose({
   border-radius: 9999px;
 }
 
+@container chat-composer (max-width: 420px) {
+  .actions { row-gap: var(--space-6); }
+  .actions :deep(.chat-configuration) { margin-left: 0; }
+}
 </style>

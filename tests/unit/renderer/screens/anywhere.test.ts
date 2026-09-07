@@ -20,14 +20,11 @@ vi.mock('@services/llms/manager.ts', async () => {
   LlmManager.prototype.isEngineConfigured = vi.fn(() => true)
   LlmManager.prototype.getEngineName = () => 'mock'
   LlmManager.prototype.getCustomEngines = () => [] as any[]
-  LlmManager.prototype.getFavoriteId = () => 'favid'
-  LlmManager.prototype.isFavoriteModel = vi.fn(() => false)
   LlmManager.prototype.getChatModels = vi.fn(() => [{ id: 'chat', name: 'chat', ...defaultCapabilities }])
   LlmManager.prototype.getChatModel = vi.fn(() => ({ id: 'chat', name: 'chat', ...defaultCapabilities }))
   LlmManager.prototype.getChatEngineModel = () => ({ engine: 'mock', model: 'chat' })
   LlmManager.prototype.getChatEngines = vi.fn(() => ['mock'])
   LlmManager.prototype.hasChatModels = vi.fn(() => true)
-  LlmManager.prototype.isFavoriteEngine = vi.fn(() => false)
   LlmManager.prototype.isCustomEngine = vi.fn(() => false)
   LlmManager.prototype.igniteEngine = vi.fn(() => new LlmMock(store.config.engines.mock))
   LlmManager.prototype.checkModelsCapabilities = vi.fn()
@@ -177,10 +174,10 @@ test('Submits prompt without streaming', async () => {
 })
 
 test('Submits system prompt with params', async () => {
-  const wrapper = await prompt({ instructions: 'instructions', attachments: [ new Attachment('file', 'text/plain') ], expert: store.experts[0] })
+  const wrapper = await prompt({ instructions: 'instructions', attachments: [ new Attachment('file', 'text/plain') ], expert: { ...store.experts[0], type: 'user', prompt: 'Custom instructions' } })
   await vi.waitUntil(async () => !wrapper.vm.processing)
   expect(wrapper.findComponent(Prompt).vm.getPrompt()).toBe('')
-  expect(wrapper.findComponent(MessageItem).text()).toContain('[{"role":"system","content":"instructions"},{"role":"user","content":"experts.experts.uuid1.prompt\\nHello LLM (file_decoded)"},{"role":"assistant","content":"Be kind. Don\'t mock me"}]')
+  expect(wrapper.findComponent(MessageItem).text()).toContain('[{"role":"system","content":"instructions"},{"role":"user","content":"Custom instructions\\nHello LLM (file_decoded)"},{"role":"assistant","content":"Be kind. Don\'t mock me"}]')
 })
 
 test('Submits system user with params', async () => {

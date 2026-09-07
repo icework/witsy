@@ -14,13 +14,15 @@ import { workspacesFolder } from './workspace'
 const filesToBackup = (app: App) => ([
   { name: 'settings.json', path: settingsFilePath(app) },
   { name: 'apiKeys.json', path: apiKeysFilePath(app) },
-  { name: 'commands.json', path: commandsFilePath(app) }
+  { name: 'commands.json', path: commandsFilePath(app) },
+  ...['apiKeys-debug.json', 'runtime-connections.json', 'chat-agents.json', 'context-workflows.json', 'screenshot-action.json', 'window.json', 'code_exec.json'].map(name => ({ name, path: path.join(app.getPath('userData'), name) }))
 ])
 
 // Folders to backup with their respective paths
 const foldersToBackup = (app: App) => ([
   { name: 'engines', path: path.join(app.getPath('userData'), 'engines') },
   { name: 'workspaces', path: workspacesFolder(app) },
+  { name: 'skills', path: path.join(app.getPath('userData'), 'skills') },
 ])
 
 export const exportBackup = async (app: App): Promise<boolean> => {
@@ -32,12 +34,12 @@ export const exportBackup = async (app: App): Promise<boolean> => {
     }
 
     // Create backup filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0]
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const backupFilename = `witsy-backup-${timestamp}.zip`
     const backupPath = path.join(targetDir, backupFilename)
 
     // Create a file to stream archive data to
-    const output = fs.createWriteStream(backupPath)
+    const output = fs.createWriteStream(backupPath, { mode: 0o600, flags: 'wx' })
     const archive = archiver('zip', {
       zlib: { level: 9 } // Compression level
     })

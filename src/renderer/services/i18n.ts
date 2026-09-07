@@ -81,7 +81,7 @@ const expertI18n = (expert: Expert|null, attr: i18nExpertAttr): string => {
 }
 
 const expertI18nDefault = (expert: Expert|null, attr: i18nExpertAttr): string => {
-  return expert ? tllm(`experts.experts.${expert.id}.${attr}`) : ''
+  return expert?.[attr] || ''
 }
 
 const categoryI18n = (category: ExpertCategory|null, attr: i18nCategoryAttr): string => {
@@ -91,7 +91,7 @@ const categoryI18n = (category: ExpertCategory|null, attr: i18nCategoryAttr): st
 }
 
 const categoryI18nDefault = (category: ExpertCategory|null, attr: i18nCategoryAttr): string => {
-  return category ? tllm(`experts.categories.${category.id}.${attr}`) : ''
+  return category?.[attr] || ''
 }
 
 const fullExpertI18n = (expert: Expert|null): Expert => {

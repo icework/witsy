@@ -228,3 +228,41 @@ test('Migration: MCP tool name old suffix format', async () => {
   // The fixture has: 3 with suffix in llm.defaults, 2 with suffix in prompt, 1 with suffix in realtime = 6
   // Actually: tool1___90ab, tool2___0abc, browse___cdef (3), search___1234, execute___5678 (2), voice___abcd (1) = 6
 })
+
+
+test.each([
+  { selectedId: 'selected', favorites: [{ id: 'selected', engine: 'anthropic', model: 'saved-model' }], expectedEngine: 'anthropic' },
+  { selectedId: 'missing', favorites: [{ id: 'first', engine: 'anthropic', model: 'saved-model' }], expectedEngine: 'anthropic' },
+  { selectedId: 'missing', favorites: [], expectedEngine: 'openai' },
+])('Migrates retired favorites provider: $selectedId / $expectedEngine', ({ selectedId, favorites, expectedEngine }) => {
+  const legacy = {
+    general: { safeKeys: false },
+    llm: { engine: '__favorites__', favorites },
+    studio: { favorites: [{ engine: 'replicate', model: 'saved-image-model' }] },
+    engines: {
+      __favorites__: { model: { chat: selectedId } },
+      anthropic: { model: { chat: 'previous-model' } },
+    },
+  }
+  const read = vi.spyOn(fs, 'readFileSync').mockReturnValueOnce(JSON.stringify(legacy))
+  const exists = vi.spyOn(fs, 'existsSync').mockReturnValue(false)
+  try {
+    const loaded = config.loadSettings(app)
+    expect(loaded.llm.engine).toBe(expectedEngine)
+    if (expectedEngine === 'anthropic') {
+      expect(loaded.engines.anthropic.model.chat).toBe('saved-model')
+    }
+    expect(loaded.llm).not.toHaveProperty('favorites')
+    expect(loaded.studio).not.toHaveProperty('favorites')
+    expect(loaded.engines).not.toHaveProperty('__favorites__')
+    expect(fs.writeFileSync).toHaveBeenCalledWith(config.settingsFilePath(app), expect.any(String))
+    const saved = JSON.parse(vi.mocked(fs.writeFileSync).mock.calls.find(([file]) => file === config.settingsFilePath(app))[1] as string)
+    expect(saved.llm.engine).toBe(expectedEngine)
+    expect(saved.llm).not.toHaveProperty('favorites')
+    expect(saved.engines).not.toHaveProperty('__favorites__')
+    expect(config.loadSettings(app)).toEqual(loaded)
+  } finally {
+    read.mockRestore()
+    exists.mockRestore()
+  }
+})

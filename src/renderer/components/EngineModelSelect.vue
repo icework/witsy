@@ -32,7 +32,6 @@
       :teleport="true"
       :defaultLabel="defaultLabel"
       :css-classes="cssClasses"
-      :favorites="favorites"
       @close="closeDropdown"
       @modelSelected="onModelSelected"
     />
@@ -52,7 +51,6 @@ import EngineModelMenu from './EngineModelMenu.vue'
 interface Props {
   engine?: string
   model?: string
-  favorites?: boolean
   position?: MenuPosition
   defaultLabel?: string
   cssClasses?: string
@@ -61,7 +59,6 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   engine: '',
   model: '',
-  favorites: true,
   position: 'below',
 })
 

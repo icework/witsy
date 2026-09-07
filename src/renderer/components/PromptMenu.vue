@@ -14,11 +14,10 @@
 <script setup lang="ts">
 import { useDocReposMenu } from '@composables/useDocReposMenu'
 import { useExpertsMenu } from '@composables/useExpertsMenu'
-import { useInstructionsMenu } from '@composables/useInstructionsMenu'
 import { useSkillsMenu } from '@composables/useSkillsMenu'
 import { useToolsMenu } from '@composables/useToolsMenu'
 import { t } from '@services/i18n'
-import { BrainIcon, FeatherIcon, HammerIcon, LightbulbIcon, PaperclipIcon, TelescopeIcon, ZapIcon } from 'lucide-vue-next'
+import { BrainIcon, CameraIcon, FileTextIcon, HammerIcon, LightbulbIcon, PaperclipIcon, TelescopeIcon, ZapIcon } from 'lucide-vue-next'
 import { ToolSelection } from 'types/llm'
 import { McpServerWithTools, McpTool } from 'types/mcp'
 import type { MenuItem } from 'types/menu'
@@ -33,8 +32,9 @@ interface Props {
   enableExperts?: boolean
   enableSkills?: boolean
   enableDocRepo?: boolean
-  enableInstructions?: boolean
   enableTools?: boolean
+  enableContext?: boolean
+  contextDisabled?: boolean
   enableAttachments?: boolean
   enableDeepResearch?: boolean
   toolSelection?: ToolSelection
@@ -47,7 +47,6 @@ const props = withDefaults(defineProps<Props>(), {
   enableExperts: true,
   enableSkills: true,
   enableDocRepo: true,
-  enableInstructions: true,
   enableTools: true,
   enableAttachments: true,
   enableDeepResearch: true,
@@ -64,7 +63,6 @@ interface Emits {
   docRepoSelected: [docRepoUuid: string]
   docReposChanged: [docRepoUuids: string[]]
   manageDocRepo: []
-  instructionsSelected: [instructionId: string]
   selectAllTools: [visibleIds?: string[] | null]
   unselectAllTools: [visibleIds?: string[] | null]
   selectAllPlugins: [visibleIds?: string[] | null]
@@ -75,6 +73,7 @@ interface Emits {
   unselectAllServerTools: [server: McpServerWithTools, visibleIds?: string[] | null]
   allServerToolsToggle: [server: McpServerWithTools]
   serverToolToggle: [server: McpServerWithTools, tool: McpTool]
+  contextRequested: [kind: 'screenshot' | 'text']
   attachRequested: []
   deepResearchToggled: []
 }
@@ -112,27 +111,9 @@ const docReposLogic = props.enableDocRepo ? useDocReposMenu({
   selectedDocRepos: selectedDocReposRef,
 }) : null
 
-// Use instructions menu composable (only if instructions enabled)
-const instructionsLogic = props.enableInstructions ? useInstructionsMenu({
-  emit,
-}) : null
-
-
 // Compose all menu items
 const composedMenuItems = computed<MenuItem[]>(() => {
   const items: MenuItem[] = []
-
-  // Instructions submenu (from composable)
-  if (props.enableInstructions && instructionsLogic) {
-    items.push({
-      id: 'instructions',
-      label: t('prompt.menu.instructions.title'),
-      icon: FeatherIcon,
-      submenu: instructionsLogic.menuItems.value,
-      showFilter: instructionsLogic.showFilter,
-      cssClass: 'instructions',
-    })
-  }
 
   // Tools submenu (from composable)
   if (props.enableTools && toolsLogic) {
@@ -200,7 +181,7 @@ const composedMenuItems = computed<MenuItem[]>(() => {
   }
 
   // Separator before attachments
-  if (props.enableAttachments && (props.enableExperts || props.enableSkills || props.enableDocRepo || props.enableInstructions || props.enableDeepResearch)) {
+  if (props.enableAttachments && (props.enableExperts || props.enableSkills || props.enableDocRepo || props.enableDeepResearch)) {
     items.push({
       id: 'separator',
       type: 'separator',
@@ -218,6 +199,23 @@ const composedMenuItems = computed<MenuItem[]>(() => {
         emit('attachRequested')
       },
     })
+  }
+
+  if (props.enableContext) {
+    for (const kind of ['screenshot', 'text'] as const) {
+      items.push({
+        id: `context-${kind}`,
+        label: t(kind === 'screenshot' ? 'chatAgent.capture' : 'contextWorkflow.addText'),
+        icon: kind === 'screenshot' ? CameraIcon : FileTextIcon,
+        cssClass: `context-${kind}`,
+        disabled: props.contextDisabled,
+        onClick: () => {
+          if (props.contextDisabled) return
+          emit('close')
+          emit('contextRequested', kind)
+        },
+      })
+    }
   }
 
   return items

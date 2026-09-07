@@ -1,4 +1,4 @@
-import { FavoriteModel } from "./config"
+import { WorkspaceModel } from "./config"
 import { ToolSelection } from "./llm"
 
 export type WorkspaceHeader = {
@@ -19,7 +19,7 @@ export type WebApp = {
 }
 
 export type Workspace = WorkspaceHeader & {
-  models?: FavoriteModel[]
+  models?: WorkspaceModel[]
   experts?: string[]
   docrepos?: string[]
   tools?: ToolSelection[]

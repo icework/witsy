@@ -3,7 +3,7 @@
     
     <h1>{{ t('chat.empty.greeting') }}</h1>
     
-    <div class="shortcuts">
+    <div class="shortcuts" v-if="!compact">
 
       <template  v-if="shortcuts.length">
 
@@ -84,6 +84,8 @@ type Shortcut = {
   run: () => void
 }
 
+defineProps<{ compact?: boolean }>()
+
 const shortcuts = ref<Shortcut[]>([])
 const showAllShortcuts = ref(false)
 
@@ -145,16 +147,19 @@ const openDocRepo = () => {
 <style scoped>
 
 .empty {
-  width: 75%;
-  min-width: 300px;
-  max-width: 600px;
+  width: min(80%, calc(var(--space-32) * 9));
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-12) 0;
   align-self: center;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3rem;
+  gap: var(--space-20);
 
   color: var(--text-color);
 

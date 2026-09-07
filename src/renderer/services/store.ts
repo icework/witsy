@@ -163,7 +163,7 @@ export const store: Store = reactive({
     const llmManager: ILlmManager = LlmFactory.manager(store.config)
     await llmManager.initModels()
     if (!llmManager.isEngineReady(store.config.llm.engine)) {
-      for (const engine of llmManager.getChatEngines({ favorites: false })) {
+      for (const engine of llmManager.getChatEngines()) {
         if (llmManager.isEngineReady(engine)) {
           console.log(`Selected engine not ready, selecting ${engine} as default`)
           store.config.llm.engine = engine

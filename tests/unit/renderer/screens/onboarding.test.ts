@@ -48,9 +48,6 @@ vi.mock('@services/llms/manager', async () => {
       isEngineReady() {
         return true
       }
-      isFavoriteModel() {
-        return false
-      }
       async loadModels(engine: string) {
         // Mock load models with different behaviors
         if (engine === 'error-engine') {

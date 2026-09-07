@@ -135,17 +135,6 @@ describe('TipsManager', () => {
       })
     })
 
-    test('showFavoriteModelsTip shows dialog', async () => {
-      const tipsManager = useTipsManager(store)
-
-      await tipsManager.showFavoriteModelsTip()
-
-      expect(Dialog.show).toHaveBeenCalledWith({
-        title: 'tips.favoriteModels.title',
-        text: 'tips.favoriteModels.text',
-      })
-    })
-
     test('showPluginsDisabledTip shows dialog with checkbox', async () => {
       const tipsManager = useTipsManager(store)
       vi.mocked(Dialog.show).mockResolvedValue({ value: true } as any)

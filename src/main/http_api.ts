@@ -58,7 +58,7 @@ export function installApiEndpoints(httpServer: HttpServer, app: App, mcp: Mcp, 
       const settings = config.loadSettings(app)
       const llmManager = LlmFactory.manager(settings)
 
-      const engines = llmManager.getChatEngines({ favorites: false })
+      const engines = llmManager.getChatEngines()
         .filter(engine => llmManager.isEngineConfigured(engine))
         .map(engine => ({
           id: engine,

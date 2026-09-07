@@ -157,25 +157,6 @@ test('Ollama falls back to chat models', async () => {
   expect(optionValues).toContain('gemma')
 })
 
-test('Favorites', async () => {
-
-  const wrapper = mount(DesignStudio)
-  const settings = wrapper.findComponent({ name: 'Settings' })
-  await wrapper.vm.$nextTick()
-
-  await settings.find<HTMLSelectElement>('[name=type]').setValue('image')
-  await settings.find<HTMLSelectElement>('[name=engine]').setValue('openai')
-  expect(settings.find<HTMLButtonElement>('[name=favorite]').exists()).toBe(false)
-
-  await settings.find<HTMLSelectElement>('[name=engine]').setValue('replicate')
-  expect(settings.find<HTMLButtonElement>('[name=favorite]').exists()).toBe(true)
-  await settings.find<HTMLButtonElement>('[name=favorite]').trigger('click')
-  expect(store.config.studio.favorites).toStrictEqual([ { engine: 'replicate', model: 'replicate1' } ])
-
-  await settings.find<HTMLButtonElement>('[name=favorite]').trigger('click')
-  expect(store.config.studio.favorites).toStrictEqual([])
-
-})
   
 test('History', async () => {
 

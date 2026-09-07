@@ -1,33 +1,35 @@
 <template>
-  <section class="chat-agent-picker form form-large">
-    <div class="agent-row">
-      <label>{{ t('chatAgent.label') }}
-        <select v-model="selected" @change="choose" :disabled="busy || state.busy || state.capturing">
+  <section ref="pickerElement" class="chat-agent-picker" :class="{ pending }">
+    <div class="agent-row agent-toolbar">
+      <label class="agent-select"><BotIcon aria-hidden="true" /><span>{{ t('chatAgent.label') }}</span>
+        <select :title="agents.find(a => a.id === selected)?.name || chat.chatAgent?.name || t('chatAgent.chooseAgent')" :aria-label="t('chatAgent.label')" v-model="selected" @change="choose" :disabled="busy || state.busy || state.capturing">
           <option value="" disabled>{{ chat.chatAgent?.name || t('chatAgent.chooseAgent') }}</option>
           <option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }} ({{ agent.kind }})</option>
         </select>
       </label>
-      <button @click="capture" :disabled="busy || state.busy || state.capturing || pending">{{ t('chatAgent.capture') }}</button>
-      <button @click="addText" :disabled="busy || state.busy || state.capturing || pending">{{ t('contextWorkflow.addText') }}</button>
       <template v-if="state.compact">
+        <div class="quick-chat-actions">
+        <button type="button" :aria-label="t('quickChat.new')" :title="t('quickChat.new')" :disabled="working || busy || state.busy || state.capturing || pending" @click="window.api.chatAgents.openQuickChat(true)"><MessageCirclePlusIcon /></button>
+        <button type="button" :aria-label="t('quickChat.settings')" :title="t('quickChat.settings')" @click="openQuickChatSettings"><Settings2Icon /></button>
         <button @click="window.api.chatAgents.screenshotUpdate({ expand: true })">{{ t('chatAgent.expand') }}</button>
-        <button @click="window.api.chatAgents.screenshotUpdate({ hide: true })">{{ t('chatAgent.hide') }}</button>
+        <button class="quick-chat-hide" @click="window.api.chatAgents.screenshotUpdate({ hide: true })">{{ t('chatAgent.hide') }}</button>
+        </div>
       </template>
     </div>
-    <ChatConfiguration :chat="chat" :disabled="busy || state.busy || state.capturing" @change="emit('configure', $event)" />
     <div v-if="pending" class="screenshot-preview">
       <div v-if="state.image" class="screenshot-attachment">
         <img :src="state.image" :alt="t('chatAgent.preview')" />
         <button type="button" @click="removeScreenshot" :disabled="working || busy || state.busy">{{ t('chatAgent.removeScreenshot') }}</button>
       </div>
-      <strong v-if="state.workflowName">{{ state.workflowName }}</strong>
+      <strong>{{ state.workflowName || t('agentDesign.contextTitle') }}</strong>
       <p>{{ state.image ? t('chatAgent.previewHelp') : t('contextWorkflow.previewHelp') }}</p>
-      <form @submit.prevent="ask">
-        <textarea v-if="state.contextKind === 'selected-text'" v-model="contextText" :aria-label="t('contextWorkflow.selected-text')" rows="4" maxlength="64000" />
-        <textarea v-model="question" :aria-label="t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question')" rows="2" />
-        <label><input type="checkbox" v-model="temporary" :disabled="chat.hasMessages()" /> {{ t('chatAgent.temporary') }}</label>
-        <div class="agent-row">
-          <button type="submit" :disabled="working || busy || state.busy || !question.trim()">{{ t('chatAgent.ask') }}</button>
+      <form class="context-composer" @submit.prevent="ask">
+        <label class="context-field" v-if="state.contextKind === 'selected-text'"><span>{{ t('contextWorkflow.selected-text') }}</span><textarea v-model="contextText" :aria-label="t('contextWorkflow.selected-text')" rows="4" maxlength="64000" /></label>
+        <label class="context-field"><span>{{ t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question') }}</span><textarea v-model="question" :aria-label="t(state.contextKind === 'selected-text' ? 'contextWorkflow.prompt' : 'chatAgent.question')" rows="2" /></label>
+        <label class="temporary-toggle"><input type="checkbox" v-model="temporary" :disabled="chat.hasMessages()" /> {{ t('chatAgent.temporary') }}</label>
+        <div class="context-settings"><slot name="composer-controls" /></div>
+        <div class="agent-row context-composer-actions">
+          <button class="primary" type="submit" :disabled="working || busy || state.busy || !question.trim()">{{ t('chatAgent.ask') }}</button>
           <button v-if="state.image" type="button" @click="retake" :disabled="working">{{ t('chatAgent.retake') }}</button>
           <button type="button" @click="window.api.chatAgents.screenshotUpdate({ dismiss: true })">{{ t('common.cancel') }}</button>
         </div>
@@ -37,10 +39,9 @@
   </section>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { BotIcon, MessageCirclePlusIcon, Settings2Icon } from 'lucide-vue-next'
 import Chat from '@models/chat'
-import ChatConfiguration from './ChatConfiguration.vue'
-import { RuntimeBinding } from '../../types/runtime'
 import { store } from '@services/store'
 import { t } from '@services/i18n'
 import LlmFactory from '@services/llms/llm'
@@ -48,10 +49,11 @@ import useIpcListener from '@composables/ipc_listener'
 import useEventBus from '@composables/event_bus'
 import { ChatAgent, ScreenshotState } from '../../types/chat_agent'
 const props = defineProps<{ chat: Chat; busy?: boolean }>()
-const emit = defineEmits<{ select: [agent: ChatAgent]; ask: [payload: { agent: ChatAgent; image?: string; text?: string; question: string; temporary: boolean }]; compact: [state: ScreenshotState]; removedScreenshot: [question: string]; configure: [config: { runtime?: RuntimeBinding; engine?: string; model?: string }] }>()
+const emit = defineEmits<{ select: [agent: ChatAgent]; ask: [payload: { agent: ChatAgent; image?: string; text?: string; question: string; temporary: boolean }]; compact: [state: ScreenshotState]; removedScreenshot: [question: string] }>()
 const window = globalThis.window
 const manager = LlmFactory.manager(store.config)
 const agents = ref<ChatAgent[]>([])
+const pickerElement = ref<HTMLElement>()
 const selected = ref(''), question = ref(''), contextText = ref(''), error = ref('')
 const working = ref(false), temporary = ref(false)
 let retaking = false
@@ -63,6 +65,7 @@ const attempt = async (action: () => Promise<void>) => {
 }
 const receive = (next: ScreenshotState) => {
   if (!next.capturing && (next.image || next.contextKind === 'selected-text') && (next.requestId !== state.value.requestId || next.image !== state.value.image || next.contextKind !== state.value.contextKind || state.value.capturing)) {
+    void nextTick(() => { if (pickerElement.value) pickerElement.value.scrollTop = 0 })
     if (!retaking) {
       const agent = agents.value.find(a => a.id === next.agentId)
       if (agent) { selected.value = agent.id; emit('select', agent) }
@@ -85,6 +88,10 @@ const reload = () => attempt(async () => {
 })
 onMounted(reload)
 watch(() => props.chat?.uuid, () => { selected.value = props.chat?.chatAgent?.id || '' }, { immediate: true })
+const openQuickChatSettings = async () => {
+  await window.api.chatAgents.screenshotUpdate({ expand: true })
+  window.api.settings.open({ initialTab: 'chat' })
+}
 const choose = () => { const agent = agents.value.find(a => a.id === selected.value); if (agent) emit('select', agent) }
 const capture = () => attempt(async () => { await window.api.chatAgents.capture() })
 const removeScreenshot = () => attempt(async () => {
@@ -112,14 +119,38 @@ const ask = () => attempt(async () => {
   }
   emit('ask', { agent, ...(state.value.image ? { image: state.value.image } : { text: contextText.value }), question: question.value.trim(), temporary: temporary.value })
 })
-defineExpose({ reload, reportError: (message: string) => { error.value = message } })
+const addContext = (kind: 'screenshot' | 'text') => {
+  if (working.value || props.busy || state.value.busy || state.value.capturing || pending.value) return
+  return kind === 'screenshot' ? capture() : addText()
+}
+defineExpose({ addContext, reload, reportError: (message: string) => { error.value = message } })
 </script>
 <style scoped>
-.chat-agent-picker { padding: var(--form-normal-font-size); font-size: var(--form-normal-font-size); }
-.agent-row { display: flex; flex-wrap: wrap; align-items: end; gap: var(--control-border-radius); }
-.agent-row label { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.agent-row > label:first-child { flex-basis: calc(var(--form-normal-font-size) * 16); }
-.chat-agent-picker textarea { width: 100%; box-sizing: border-box; }
-.screenshot-preview img { display: block; max-width: 100%; max-height: calc(var(--form-normal-font-size) * 14); object-fit: contain; }
-[role='alert'] { font-weight: bold; }
+.chat-agent-picker { margin: 0 var(--space-12); font-size: var(--font-size-13); min-width: 0; }
+.agent-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-4) 0; }
+.quick-chat-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-left: auto; }
+.quick-chat-actions button { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-16); }
+.quick-chat-actions svg { width: var(--icon-md); height: var(--icon-md); }
+.agent-toolbar:has(.quick-chat-actions) .agent-select { flex: 1 1 calc(var(--space-32) * 3); }
+.agent-select { flex: 0 1 auto; max-width: 100%; display: flex; align-items: center; gap: var(--space-4); min-width: 0; color: var(--faded-text-color); }
+.agent-select > span { white-space: nowrap; font-size: var(--font-size-12); }
+.agent-select svg { width: var(--icon-md); height: var(--icon-md); flex-shrink: 0; }
+.agent-select select { width: auto; min-width: 0; field-sizing: content; max-width: 100%; border: none; background-color: transparent; font-size: var(--font-size-13); font-weight: var(--font-weight-medium); text-overflow: ellipsis; padding: var(--space-2); }
+.pending { overflow-y: auto; margin-bottom: var(--space-12); }
+.screenshot-preview { display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-12); border: var(--space-px) solid var(--border-color); border-radius: var(--radius-2xl); background: var(--background-color-light); }
+.screenshot-preview > p { margin: 0; color: var(--faded-text-color); line-height: 1.5; }
+.screenshot-attachment { display: flex; align-items: flex-start; gap: var(--space-8); flex-wrap: wrap; }
+.screenshot-attachment img { display: block; max-width: 100%; max-height: calc(var(--space-32) * 3); object-fit: contain; border-radius: var(--radius-lg); border: var(--space-px) solid var(--border-color); }
+.context-composer { container: chat-composer / inline-size; display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
+.context-composer textarea { width: 100%; box-sizing: border-box; resize: vertical; padding: var(--space-8); border-radius: var(--radius-lg); font-size: var(--font-size-14); line-height: 1.5; }
+.context-field { display: flex; flex-direction: column; gap: var(--space-4); font-size: var(--font-size-13); font-weight: var(--font-weight-medium); }
+.temporary-toggle { display: flex; align-items: center; gap: var(--space-3); color: var(--dimmed-text-color); }
+.context-composer-actions { position: sticky; bottom: 0; z-index: 1; padding-block: var(--space-8); border-top: var(--space-px) solid var(--border-color); background: var(--background-color-light); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+button { border-radius: var(--radius-lg); }
+.context-composer-actions button:disabled { opacity: 0.5; }
+.context-settings { min-width: 0; }
+.context-settings :deep(.chat-configuration) { justify-content: flex-start; }
+.primary { order: 2; margin-left: auto; background: var(--highlight-color); color: var(--highlighted-color); border-color: var(--highlight-color); }
+[role='alert'] { padding: var(--space-8); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-error) 8%, var(--background-color)); color: var(--color-error); overflow-wrap: anywhere; }
+
 </style>

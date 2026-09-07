@@ -454,3 +454,10 @@ test('Context menu usage shows dialog with total usage', async () => {
 
   })
 })
+
+test.each(['screenshot', 'text'])('Forwards %s context requests from the chat box', async (kind) => {
+  const wrapper = mount(ChatArea, { props: { chat, enableContext: true }, ...stubTeleport })
+  await wrapper.find('.prompt-menu').trigger('click')
+  await wrapper.find(`.context-${kind}`).trigger('click')
+  expect(wrapper.emitted('context-requested')).toEqual([[kind]])
+})
