@@ -10,7 +10,9 @@ export function runtimeURL(connection: RuntimeConnection, binding: RuntimeBindin
     if (!/^[\w-]+$/.test(binding.profile)) throw new Error('Invalid Hermes profile name.')
     prefix += `/p/${encodeURIComponent(binding.profile)}`
   }
-  url.pathname = prefix + route
+  const [routePath, query] = route.split('?')
+  url.pathname = prefix + routePath
+  url.search = query || ''
   if (connection.kind === 'opencode' && binding.directory) url.searchParams.set('directory', binding.directory)
   return url.toString()
 }

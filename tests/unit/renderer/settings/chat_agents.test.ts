@@ -46,3 +46,22 @@ test('plus starts an empty draft, and Save creates a separate Agent', async () =
   expect(window.api.chatAgents.save).toHaveBeenCalledWith(expect.objectContaining({ id: '', name: 'New research' }))
   expect(wrapper.findAll('.md-master-list-item')).toHaveLength(2)
 })
+
+test.each(['hermes', 'opencode'] as const)('%s Agent customization uses the visible model list and preserves a hidden saved choice on an unrelated edit', async kind => {
+  const agent = { id: 'a', name: 'Existing agent', kind, binding: { kind, connectionId: 'local', provider: 'p', model: 'hidden' } }
+  vi.mocked(window.api.chatAgents.list).mockResolvedValue([agent])
+  vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'local', name: 'Local', kind, endpoint: 'http://localhost:4096' }])
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: [], profiles: [], models: [{ provider: 'p', id: 'visible', name: 'Visible' }] })
+  vi.mocked(window.api.chatAgents.save).mockImplementation(async value => value)
+  const wrapper = mount(SettingsChatAgents); await wrapper.vm.load(); await flushPromises()
+  const picker = wrapper.find('.runtime-model-picker')
+  expect(picker.find('option[value="hidden"]').exists()).toBe(false)
+  expect(picker.find('option[value="visible"]').exists()).toBe(true)
+  await wrapper.find('.md-detail input').setValue('Renamed agent')
+  await wrapper.find('form').trigger('submit'); await flushPromises()
+  expect(window.api.chatAgents.save).toHaveBeenLastCalledWith(expect.objectContaining({ binding: expect.objectContaining({ model: 'hidden' }) }))
+  await wrapper.find('.runtime-model-picker').findAll('select')[1].setValue('visible')
+  await wrapper.find('form').trigger('submit'); await flushPromises()
+  expect(window.api.chatAgents.save).toHaveBeenLastCalledWith(expect.objectContaining({ binding: expect.objectContaining({ provider: 'p', model: 'visible' }) }))
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+})

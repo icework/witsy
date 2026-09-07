@@ -12,25 +12,26 @@
       </select>
       <ChevronDownIcon class="chevron" aria-hidden="true" />
     </label>
-    <label class="provider-control" :title="chat.runtime ? `${externalProvider} — ${t('chatAgent.externalModelLocked')}` : nativeEngine ? manager.getEngineName(nativeEngine) : t('chatAgent.provider')">
+    <RuntimeModelPicker v-if="chat.runtime" compact :binding="chat.runtime" :catalog="catalog" :loading="catalogLoading" :error="catalogError" :disabled="disabled" @change="changeExternalModel" @refresh="reloadCatalog(true)" />
+    <template v-else>
+    <label class="provider-control" :title="nativeEngine ? manager.getEngineName(nativeEngine) : t('chatAgent.provider')">
       <GlobeIcon aria-hidden="true" />
-      <select :aria-label="t('chatAgent.provider')" v-if="chat.runtime" :value="externalProvider" disabled><option :value="externalProvider">{{ externalProvider }}</option></select>
-      <select :aria-label="t('chatAgent.provider')" v-else :value="nativeEngine || ''" :disabled="disabled" @change="changeProvider">
+      <select :aria-label="t('chatAgent.provider')" :value="nativeEngine || ''" :disabled="disabled" @change="changeProvider">
         <option value="" disabled>{{ t('chatAgent.provider') }}</option>
         <option v-for="engine in engines" :key="engine" :value="engine">{{ manager.getEngineName(engine) }}</option>
       </select>
       <ChevronDownIcon class="chevron" aria-hidden="true" />
     </label>
-    <label class="model-control" :title="chat.runtime ? `${externalModel} — ${t('chatAgent.externalModelLocked')}` : models.find(m => m.id === chat.model)?.name || chat.model || t('runtime.model')">
+    <label class="model-control" :title="models.find(m => m.id === chat.model)?.name || chat.model || t('runtime.model')">
       <BoxIcon aria-hidden="true" />
-      <select :aria-label="t('runtime.model')" v-if="chat.runtime" :value="externalModel" disabled><option :value="externalModel">{{ externalModel }}</option></select>
-      <select :aria-label="t('runtime.model')" v-else :value="nativeEngine ? chat.model || '' : ''" :disabled="disabled || !nativeEngine" @change="changeModel">
+      <select :aria-label="t('runtime.model')" :value="nativeEngine ? chat.model || '' : ''" :disabled="disabled || !nativeEngine" @change="changeModel">
         <option value="" disabled>{{ t('runtime.model') }}</option>
         <option v-if="nativeEngine && chat.model && !models.some(m => m.id === chat.model)" :value="chat.model">{{ chat.model }}</option>
         <option v-for="model in models" :key="model.id" :value="model.id">{{ model.name }}</option>
       </select>
       <ChevronDownIcon class="chevron" aria-hidden="true" />
     </label>
+    </template>
   </div>
 </template>
 <script setup lang="ts">
@@ -41,6 +42,9 @@ import LlmFactory from '@services/llms/llm'
 import { store } from '@services/store'
 import { t } from '@services/i18n'
 import useEventBus from '@composables/event_bus'
+import useIpcListener from '@composables/ipc_listener'
+import useRuntimeCatalog from '@composables/runtime_catalog'
+import RuntimeModelPicker from './RuntimeModelPicker.vue'
 import { RuntimeBinding, RuntimeConnection } from '../../types/runtime'
 const props = defineProps<{ chat: Chat; disabled?: boolean }>()
 const emit = defineEmits<{ change: [config: { runtime?: RuntimeBinding; engine?: string; model?: string }] }>()
@@ -50,11 +54,12 @@ const engines = computed(() => manager.getChatEngines().filter(engine => manager
 const nativeEngine = computed(() => engines.value.includes(props.chat.engine) ? props.chat.engine : '')
 const models = computed(() => nativeEngine.value ? manager.getChatModels(nativeEngine.value) : [])
 const runtimeKey = computed(() => props.chat.runtime?.connectionId || 'native')
-const externalProvider = computed(() => props.chat.runtime?.actualProvider || props.chat.runtime?.provider || t('runtime.inherit'))
-const externalModel = computed(() => props.chat.runtime?.actualModel || props.chat.runtime?.model || t('runtime.inherit'))
+const { catalog, loading: catalogLoading, error: catalogError, reload: reloadCatalog } = useRuntimeCatalog(() => props.chat.runtime)
 const load = async () => { connections.value = await window.api.runtime.list() }
 const { onBusEvent } = useEventBus()
 onBusEvent('chat-agent-settings-changed', () => { void load() })
+const { onIpcEvent } = useIpcListener()
+onIpcEvent('runtime-connections-changed', () => { void load() })
 onMounted(load)
 const changeRuntime = (event: Event) => {
   const id = (event.target as HTMLSelectElement).value
@@ -76,10 +81,16 @@ const changeProvider = (event: Event) => {
   emit('change', { engine, model: manager.getChatModels(engine)[0]?.id || '' })
 }
 const changeModel = (event: Event) => emit('change', { engine: props.chat.engine, model: (event.target as HTMLSelectElement).value })
+const changeExternalModel = (choice: { provider?: string; model?: string }) => {
+  const runtime = { ...props.chat.runtime, ...choice }
+  delete runtime.sessionId; delete runtime.actualModel; delete runtime.actualProvider
+  emit('change', { runtime })
+}
 </script>
 <style scoped>
 .chat-configuration {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   flex: 1 1 0;

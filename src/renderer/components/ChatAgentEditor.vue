@@ -21,14 +21,13 @@
       <template v-else>
         <div class="agent-row">
           <label>{{ t('runtime.connections') }}<select v-model="binding.connectionId" @change="connectionChanged" required><option value="">{{ t('runtime.connections') }}</option><option v-for="c in matchingConnections" :key="c.id" :value="c.id">{{ c.name }}</option></select></label>
-          <label v-if="draft.kind === 'hermes'">{{ t('runtime.profile') }}<input v-model="binding.profile" placeholder="default" /></label>
+          <label v-if="draft.kind === 'hermes'">{{ t('runtime.profile') }}<input v-model.lazy="binding.profile" placeholder="default" /></label>
           <label v-else>{{ t('runtime.agent') }}<select v-model="binding.agent"><option value="">{{ t('runtime.inherit') }}</option><option v-for="agent in catalog.agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
           <button type="button" @click="check">{{ t('runtime.check') }}</button>
         </div>
+        <RuntimeModelPicker :binding="binding" :catalog="catalog" :loading="catalogLoading" :error="catalogError" :disabled="working" @change="chooseModel" @refresh="reloadCatalog(true)" />
         <div class="agent-row">
-          <label>{{ t('runtime.provider') }}<input v-model="binding.provider" :placeholder="t('runtime.inherit')" /></label>
-          <label>{{ t('runtime.model') }}<input v-model="binding.model" :placeholder="t('runtime.inherit')" /></label>
-          <label v-if="draft.kind === 'opencode'">{{ t('runtime.directory') }}<input v-model="binding.directory" :placeholder="t('runtime.inherit')" /></label>
+          <label v-if="draft.kind === 'opencode'">{{ t('runtime.directory') }}<input v-model.lazy="binding.directory" :placeholder="t('runtime.inherit')" /></label>
         </div>
         <p>{{ draft.kind === 'hermes' ? t('runtime.hermesDirectory') : t('runtime.externalStorage') }}</p>
         <p v-if="!matchingConnections.length">{{ t('chatAgent.connectionHelp') }}</p>
@@ -46,7 +45,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChatAgent } from '../../types/chat_agent'
-import { RuntimeBinding, RuntimeCatalog, RuntimeConnection } from '../../types/runtime'
+import { RuntimeBinding, RuntimeConnection } from '../../types/runtime'
+import useRuntimeCatalog from '@composables/runtime_catalog'
+import RuntimeModelPicker from './RuntimeModelPicker.vue'
 import { store } from '@services/store'
 import { t } from '@services/i18n'
 import LlmFactory from '@services/llms/llm'
@@ -58,7 +59,7 @@ const native = ref<NonNullable<ChatAgent['native']>>({ engine: '', model: '', to
 const binding = ref<RuntimeBinding>({ kind: 'hermes', connectionId: '', profile: 'default' })
 const toolIds = ref('none')
 const connections = ref<RuntimeConnection[]>([])
-const catalog = ref<RuntimeCatalog>({ agents: [], profiles: [], models: [] })
+const { catalog, loading: catalogLoading, error: catalogError, reload: reloadCatalog } = useRuntimeCatalog(() => draft.value.kind === 'native' ? undefined : binding.value)
 const working = ref(false), error = ref(''), notice = ref('')
 const engines = computed(() => manager.getChatEngines().filter(engine => !!manager.getEngineName(engine)))
 const nativeModels = computed(() => native.value.engine ? manager.getChatModels(native.value.engine) : [])
@@ -67,9 +68,15 @@ const attempt = async (action: () => Promise<void>) => {
   working.value = true; error.value = ''; notice.value = ''
   try { await action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } finally { working.value = false }
 }
-const changeKind = () => { binding.value = { connectionId: '', kind: draft.value.kind === 'opencode' ? 'opencode' : 'hermes', profile: draft.value.kind === 'hermes' ? 'default' : undefined }; catalog.value = { agents: [], profiles: [], models: [] } }
-const check = () => attempt(async () => { catalog.value = await window.api.runtime.catalog({ ...binding.value }); notice.value = t('runtime.connected') })
-const connectionChanged = () => { binding.value.profile = connections.value.find(c => c.id === binding.value.connectionId)?.defaultProfile || 'default'; void check() }
+const changeKind = () => { binding.value = { connectionId: '', kind: draft.value.kind === 'opencode' ? 'opencode' : 'hermes', profile: draft.value.kind === 'hermes' ? 'default' : undefined } }
+const check = () => attempt(async () => { await reloadCatalog(true); if (!catalogError.value) notice.value = t('runtime.connected') })
+const connectionChanged = () => {
+  binding.value = { kind: binding.value.kind, connectionId: binding.value.connectionId, ...(binding.value.kind === 'hermes' ? { profile: connections.value.find(c => c.id === binding.value.connectionId)?.defaultProfile || 'default' } : {}) }
+}
+const chooseModel = (choice: { provider?: string; model?: string }) => {
+  binding.value = { ...binding.value, ...choice }
+  delete binding.value.sessionId; delete binding.value.actualModel; delete binding.value.actualProvider
+}
 const reset = () => attempt(async () => {
   draft.value = props.agent ? JSON.parse(JSON.stringify(props.agent)) : { id: '', name: '', kind: 'native' }
   const engine = store.config.llm.engine
@@ -78,7 +85,6 @@ const reset = () => attempt(async () => {
   changeKind()
   if (draft.value.binding) binding.value = { ...draft.value.binding }
   connections.value = await window.api.runtime.list()
-  if (binding.value.connectionId && draft.value.kind !== 'native') catalog.value = await window.api.runtime.catalog({ ...binding.value })
 })
 watch(() => props.agent, reset, { immediate: true })
 const save = () => attempt(async () => {

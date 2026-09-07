@@ -94,8 +94,17 @@ export const installIpc = (
 
   const runtimes = new RuntimeService()
   ipcMain.handle(IPC.RUNTIME.LIST, () => runtimes.list())
-  ipcMain.handle(IPC.RUNTIME.SAVE, (_event, connection, secret, localProfile) => runtimes.save(connection, secret, localProfile))
-  ipcMain.handle(IPC.RUNTIME.CATALOG, (_event, binding) => runtimes.catalog(binding))
+  ipcMain.handle(IPC.RUNTIME.SAVE, (_event, connection, secret, localProfile) => {
+    const saved = runtimes.save(connection, secret, localProfile)
+    window.emitIpcEventToAll('runtime-connections-changed')
+    return saved
+  })
+  ipcMain.handle(IPC.RUNTIME.MODEL_VISIBILITY, (_event, connectionId, visibility) => {
+    const saved = runtimes.setModelVisibility(connectionId, visibility)
+    window.emitIpcEventToAll('runtime-connections-changed')
+    return saved
+  })
+  ipcMain.handle(IPC.RUNTIME.CATALOG, (_event, binding, options) => runtimes.catalog(binding, options))
   ipcMain.handle(IPC.RUNTIME.START, (event, chatId, binding, text, images) => runtimes.start(event.sender.id, chatId, binding, text, run => {
     if (event.sender.isDestroyed()) return
     const target = BrowserWindow.fromWebContents(event.sender)

@@ -21,17 +21,33 @@ test('native Provider and Model can change independently of saved Agent defaults
   await selects[0].setValue('h')
   expect(wrapper.emitted('change')?.[1][0]).toEqual({ runtime: { kind: 'hermes', connectionId: 'h', profile: 'research' } })
 })
-test.each(['hermes', 'opencode'] as const)('%s locks Provider and Model but allows switching Runtime', async kind => {
-  const chat = new Chat(); chat.runtime = { kind, connectionId: 'h', provider: 'p', model: 'm', sessionId: 'existing-session' }
+test.each(['hermes', 'opencode'] as const)('%s offers the visible catalog and clears session metadata when selecting another model', async kind => {
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: [], agents: [], providers: [{ id: 'p', name: 'Provider' }], models: [{ provider: 'p', id: 'm', name: 'M' }, { provider: 'p', id: 'next', name: 'Next' }] })
+  const chat = new Chat(); chat.runtime = { kind, connectionId: 'h', provider: 'p', model: 'm', actualModel: 'old', actualProvider: 'old-provider', sessionId: 'existing-session' }
   const wrapper = mount(ChatConfiguration, { props: { chat } }); await flushPromises()
   const selects = wrapper.findAll('select')
   expect(selects[0].element.disabled).toBe(false)
-  expect(selects[1].element.disabled).toBe(true)
-  expect(selects[2].element.disabled).toBe(true)
+  expect(selects[1].element.disabled).toBe(false)
+  expect(selects[2].element.disabled).toBe(false)
   expect(selects[1].element.value).toBe('p'); expect(selects[2].element.value).toBe('m')
+  await selects[2].setValue('next')
+  expect(wrapper.emitted('change')?.[0][0]).toEqual({ runtime: { kind, connectionId: 'h', provider: 'p', model: 'next' } })
   await selects[0].setValue('native')
-  expect(wrapper.emitted('change')?.[0][0]).not.toHaveProperty('runtime')
+  expect(wrapper.emitted('change')?.[1][0]).not.toHaveProperty('runtime')
   expect(chat.runtime.sessionId).toBe('existing-session')
+})
+
+test('visibility notifications update the active picker without changing its hidden saved selection', async () => {
+  const chat = new Chat(); chat.runtime = { kind: 'hermes', connectionId: 'h', provider: 'p', model: 'hidden' }
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: [], profiles: [], models: [{ provider: 'p', id: 'visible', name: 'Visible' }] })
+  const wrapper = mount(ChatConfiguration, { props: { chat } }); await flushPromises()
+  expect(wrapper.find('option[value="hidden"]').exists()).toBe(false)
+  expect(wrapper.findAll('select')[2].element.value).toBe('unavailable')
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: [], profiles: [], models: [{ provider: 'p', id: 'hidden', name: 'Previously hidden' }] })
+  for (const [signal, listener] of vi.mocked(window.api._on).mock.calls) if (signal === 'runtime-connections-changed') listener(null)
+  await flushPromises()
+  expect(wrapper.findAll('select')[2].element.value).toBe('hidden')
+  expect(wrapper.emitted('change')).toBeUndefined()
 })
 
 test('Native lists configured providers and drops a selected provider when its configuration is removed', async () => {

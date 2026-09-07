@@ -75,3 +75,22 @@ test('new connection opens an editable draft and Cancel leaves saved connections
   expect(window.api.runtime.save).not.toHaveBeenCalled()
   expect(window.api.runtime.start).not.toHaveBeenCalled()
 })
+
+test('saving an existing connection retains its selectable providers and models', async () => {
+  const connection = { id: 'h', kind: 'hermes' as const, name: 'Hermes', endpoint: 'http://localhost:8642', defaultProfile: 'default' }
+  vi.mocked(window.api.runtime.list).mockResolvedValue([connection])
+  vi.mocked(window.api.runtime.save).mockResolvedValue({ ...connection, name: 'Renamed Hermes' })
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: ['default'], agents: [], providers: [{ id: 'go', name: 'Go' }], models: [{ provider: 'go', id: 'luna', name: 'Luna' }], defaults: { provider: 'go', model: 'luna' } })
+  const wrapper = mount(RuntimeChat, { props: { chat: new Chat(), configuration: true } })
+  await flushPromises()
+  await wrapper.find('select').setValue('h')
+  await flushPromises()
+  await wrapper.findAll('button').find(button => button.text() === 'agentDesign.editConnection')!.trigger('click')
+  const form = wrapper.find('form')
+  await form.findAll('input')[0].setValue('Renamed Hermes')
+  await form.trigger('submit')
+  await flushPromises()
+  expect(wrapper.find('.runtime-model-picker select[aria-label="chatAgent.provider"]').text()).toContain('Go')
+  expect(wrapper.find('.runtime-model-picker select[aria-label="runtime.model"]').text()).toContain('Luna')
+  expect(wrapper.find('form').exists()).toBe(false)
+})

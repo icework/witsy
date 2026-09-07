@@ -2531,6 +2531,31 @@
       "reject": "Deny"
     }
   },
+  "runtimeModels": {
+    "title": "Visible providers & models",
+    "help": "Choose what appears in chat and agent settings for this connection. Your choices are saved locally and kept when the catalog refreshes.",
+    "refresh": "Refresh catalog",
+    "loading": "Loading models…",
+    "search": "Search providers or models",
+    "providers": "Providers",
+    "models": "models",
+    "showProvider": "Show {name}",
+    "showAll": "Show all models",
+    "hideAll": "Hide all models",
+    "providerHidden": "This provider is hidden. Enable its checkbox to show its selected models.",
+    "noMatches": "No matching providers or models.",
+    "emptyProvider": "This provider has no models available from the runtime.",
+    "empty": "No connected providers found. Configure a provider in this runtime, then refresh the catalog.",
+    "showMore": "Show more ({count} remaining)",
+    "save": "Save visibility",
+    "saved": "Visibility saved.",
+    "unsaved": "Unsaved changes",
+    "unavailable": "Hidden or unavailable",
+    "noVisibleModels": "No visible models",
+    "retainedChoice": "The saved choice is hidden or unavailable. It is kept until you choose a visible model or Runtime default.",
+    "loadFailed": "Could not load models.",
+    "retry": "Retry"
+  },
   "quickChat": {
     "title": "Quick Chat",
     "defaultAgent": "Default Agent",

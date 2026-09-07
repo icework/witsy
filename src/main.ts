@@ -311,7 +311,7 @@ app.whenReady().then(async () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
-    if (window.areAllWindowsClosed()) {
+    if (process.env.SUMMON_LAUNCHER || window.areAllWindowsClosed()) {
       window.openMainWindow();
     }
   });

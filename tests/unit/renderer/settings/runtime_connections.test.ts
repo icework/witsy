@@ -11,7 +11,7 @@ beforeEach(() => { useWindowMock(); store.loadSettings(); store.loadHistory(); e
 test('Connections contains the manual Native entry point', async () => {
   const wrapper = mount(SettingsRuntimeConnections)
   await flushPromises()
-  expect(wrapper.text()).toContain('chatAgent.custom')
+  expect(wrapper.text()).toContain('agentDesign.nativeHelp')
   expect(wrapper.text()).not.toContain('chatAgent.capture')
   await wrapper.findAll('button').find(b => b.text() === 'chatAgent.startNative')!.trigger('click')
   expect(emitBusEventMock).toHaveBeenCalledWith('new-chat', undefined)

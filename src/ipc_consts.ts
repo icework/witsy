@@ -1,6 +1,6 @@
 export const CONTEXT_WORKFLOW = { LIST: 'context-workflow:list', SAVE: 'context-workflow:save', REMOVE: 'context-workflow:remove', RUN: 'context-workflow:run' } as const
 export const CHAT_AGENT = { QUICK_CHAT: 'chat-agent:quick-chat', LIST: 'chat-agent:list', SAVE: 'chat-agent:save', REMOVE: 'chat-agent:remove', SETTINGS: 'chat-agent:screenshot-settings', CAPTURE: 'chat-agent:capture', SOURCE: 'chat-agent:screenshot-source', FINISH: 'chat-agent:screenshot-finish', STATE: 'chat-agent:screenshot-state', UPDATE: 'chat-agent:screenshot-update' } as const
-export const RUNTIME = { LIST: 'runtime:list', SAVE: 'runtime:save', CATALOG: 'runtime:catalog', START: 'runtime:start', GET: 'runtime:get', CANCEL: 'runtime:cancel', APPROVE: 'runtime:approve' } as const
+export const RUNTIME = { LIST: 'runtime:list', SAVE: 'runtime:save', CATALOG: 'runtime:catalog', MODEL_VISIBILITY: 'runtime:model-visibility', START: 'runtime:start', GET: 'runtime:get', CANCEL: 'runtime:cancel', APPROVE: 'runtime:approve' } as const
 // IPC Constants organized into logical namespaces for better organization and maintainability
 
 export const APP = {
@@ -368,6 +368,7 @@ export type IpcSignal =
   | 'workspaces-updated'          // Workspaces list changed
   | 'agents-updated'              // Agents list changed
   | 'runtime-run'
+  | 'runtime-connections-changed'
   | 'screenshot-state'
   | 'agent-run-update'            // Agent run status update
   // MCP

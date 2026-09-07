@@ -214,7 +214,7 @@ export const openMainWindow = (opts: CreateWindowOpts = {}): void => {
   app.focus({ steal: true });
 
   // open the DevTools
-  if (process.env.DEBUG && firstOpen) {
+  if (process.env.DEBUG && firstOpen && !process.env.SUMMON_LAUNCHER) {
     mainWindow.webContents.openDevTools({ mode: 'right' });
   }
 

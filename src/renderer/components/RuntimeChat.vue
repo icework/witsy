@@ -32,24 +32,18 @@
     </form>
     <button class="native-start" v-if="configuration && !selected" @click="emit('bind')">{{ t('chatAgent.startNative') }}</button>
     <template v-if="selected">
+      <RuntimeModelVisibility v-if="configuration && connection && !editing" :key="connection.id" :connection="connection" :binding="target" @saved="visibilitySaved" />
       <section v-if="configuration" class="form-section">
       <h3>{{ t('agentDesign.sessionDefaults') }}</h3>
       <div class="runtime-row">
-        <label v-if="connection?.kind === 'hermes'">{{ t('runtime.profile') }}<input v-model="target.profile" list="runtime-profiles" :disabled="busy" placeholder="default" /></label>
+        <label v-if="connection?.kind === 'hermes'">{{ t('runtime.profile') }}<input v-model.lazy="target.profile" list="runtime-profiles" :disabled="busy" placeholder="default" /></label>
         <datalist id="runtime-profiles"><option v-for="profile in catalog.profiles" :key="profile" :value="profile" /></datalist>
         <label v-if="connection?.kind === 'opencode'">{{ t('runtime.agent') }}<select v-model="target.agent" :disabled="busy"><option value="">{{ t('runtime.inherit') }}</option><option v-for="agent in catalog.agents" :key="agent" :value="agent">{{ agent }}</option></select></label>
-        <label v-if="connection?.kind === 'opencode'">{{ t('runtime.directory') }}<input v-model="target.directory" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
+        <label v-if="connection?.kind === 'opencode'">{{ t('runtime.directory') }}<input v-model.lazy="target.directory" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
 
         <button @click="loadCatalog" :disabled="loading || busy">{{ t('runtime.check') }}</button>
       </div>
-      <div class="runtime-row">
-        <template v-if="connection?.kind === 'hermes'">
-          <label>{{ t('runtime.provider') }}<input v-model="target.provider" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
-          <label>{{ t('runtime.model') }}<input v-model="target.model" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
-        </template>
-        <label v-else>{{ t('runtime.model') }}<input v-model="modelKey" list="runtime-models" @input="setModel" :disabled="busy" :placeholder="t('runtime.inherit')" /></label>
-        <datalist id="runtime-models"><option v-for="model in modelSuggestions" :key="model.provider + '/' + model.id" :value="model.provider + '/' + model.id">{{ model.name }}</option></datalist>
-      </div>
+      <RuntimeModelPicker :binding="target" :catalog="catalog" :loading="catalogLoading" :error="catalogError" :disabled="busy" @change="chooseModel" @refresh="reloadCatalog(true)" />
       <p v-if="connection?.kind === 'hermes'">{{ t('runtime.hermesDirectory') }}</p>
       <div class="form-actions"><button class="primary" @click="applyTarget" :disabled="busy || loading">{{ t('runtime.useTarget') }}</button></div>
       </section>
@@ -93,7 +87,10 @@ import { store } from '@services/store'
 import { t } from '@services/i18n'
 import useIpcListener from '@composables/ipc_listener'
 import useEventBus from '@composables/event_bus'
-import { RuntimeBinding, RuntimeCatalog, RuntimeConnection, RuntimeRun } from '../../types/runtime'
+import { RuntimeBinding, RuntimeConnection, RuntimeRun } from '../../types/runtime'
+import useRuntimeCatalog from '@composables/runtime_catalog'
+import RuntimeModelPicker from './RuntimeModelPicker.vue'
+import RuntimeModelVisibility from './RuntimeModelVisibility.vue'
 
 const props = defineProps<{ chat: Chat; screenshotPending?: boolean; configuration?: boolean; contextDisabled?: boolean }>()
 const emit = defineEmits<{ bind: [binding?: RuntimeBinding]; progress: []; contextRequested: [kind: 'screenshot' | 'text'] }>()
@@ -110,9 +107,7 @@ const showContextMenu = ref(false)
 const secret = ref('')
 const draft = ref<RuntimeConnection>({ id: '', kind: 'hermes', name: 'Hermes', endpoint: 'http://127.0.0.1:8642' })
 const target = ref<RuntimeBinding>({ connectionId: '', kind: 'hermes', profile: 'default' })
-const catalog = ref<RuntimeCatalog>({ agents: [], profiles: [], models: [] })
-const modelKey = ref('')
-const modelSuggestions = computed(() => catalog.value.models.filter(m => `${m.provider}/${m.id}`.toLowerCase().includes(modelKey.value.toLowerCase())).slice(0, 30))
+const { catalog, loading: catalogLoading, error: catalogError, reload: reloadCatalog } = useRuntimeCatalog(() => props.configuration ? target.value : undefined)
 const run = ref<RuntimeRun | null>(null)
 const tracked = new Map<string, { chat: Chat; message: Message; runId?: string }>()
 const connection = computed(() => connections.value.find(c => c.id === selected.value))
@@ -149,7 +144,6 @@ const receive = (next: RuntimeRun) => {
   if (props.chat?.uuid === next.chatId) {
     if (busy.value && selected.value === next.binding.connectionId) {
       target.value = { ...next.binding }
-      modelKey.value = next.binding.provider && next.binding.model ? `${next.binding.provider}/${next.binding.model}` : ''
     }
     run.value = next
   }
@@ -166,6 +160,7 @@ const receive = (next: RuntimeRun) => {
   if (!item.message.transient || firstBinding) persist(item.chat)
 }
 onIpcEvent('runtime-run', receive)
+onIpcEvent('runtime-connections-changed', () => { void window.api.runtime.list().then(list => { connections.value = list }) })
 onMounted(async () => { if (window.api.runtime) await attempt(async () => { connections.value = await window.api.runtime.list() }) })
 watch(() => props.chat?.uuid, async () => {
   const chat = props.chat
@@ -173,11 +168,6 @@ watch(() => props.chat?.uuid, async () => {
   selected.value = chat?.runtime?.connectionId || ''
   if (chat?.runtime) {
     target.value = { ...chat.runtime }
-    modelKey.value = target.value.provider && target.value.model ? `${target.value.provider}/${target.value.model}` : ''
-    void attempt(async () => {
-      const options = await window.api.runtime.catalog({ ...chat.runtime })
-      if (props.chat?.uuid === chat.uuid) catalog.value = options
-    })
     const snapshot = await window.api.runtime.get(chat.uuid)
     if (snapshot) {
       const message = chat.lastMessage()
@@ -193,28 +183,30 @@ const selectConnection = () => {
   if (!connection.value) return
   draft.value = { ...connection.value }; secret.value = ''
   target.value = { connectionId: selected.value, kind: connection.value.kind, ...(connection.value.kind === 'hermes' ? { profile: connection.value.defaultProfile || 'default' } : {}) }
-  catalog.value = { agents: [], profiles: [], models: [] }; modelKey.value = ''
-  void loadCatalog()
 }
 const saveConnection = (local = false) => attempt(async () => {
   const saved = await window.api.runtime.save({ ...draft.value }, secret.value || undefined, local ? draft.value.defaultProfile || 'default' : undefined)
   secret.value = ''; connections.value = await window.api.runtime.list(); selected.value = saved.id; editing.value = false
   emitBusEvent('chat-agent-settings-changed')
   selectConnection()
+  await reloadCatalog()
 })
 const loadCatalog = () => attempt(async () => {
-  catalog.value = await window.api.runtime.catalog({ ...target.value })
-  notice.value = t('runtime.connected')
+  await reloadCatalog(true)
+  if (!catalogError.value) notice.value = t('runtime.connected')
 })
-const setModel = () => {
-  const slash = modelKey.value.indexOf('/')
-  target.value.provider = slash > 0 ? modelKey.value.slice(0, slash) : undefined
-  target.value.model = slash > 0 ? modelKey.value.slice(slash + 1) : undefined
+const chooseModel = (choice: { provider?: string; model?: string }) => {
+  target.value = { ...target.value, ...choice }
+}
+const visibilitySaved = (saved: RuntimeConnection) => {
+  connections.value = connections.value.map(c => c.id === saved.id ? saved : c)
+  void reloadCatalog()
 }
 const applyTarget = () => attempt(async () => {
   const options = await window.api.runtime.catalog({ ...target.value })
-  if (target.value.kind === 'opencode' && modelKey.value && !options.models.some(m => `${m.provider}/${m.id}` === modelKey.value)) throw new Error(t('runtime.invalidModel'))
+  if (target.value.model && !options.models.some(m => m.provider === target.value.provider && m.id === target.value.model)) throw new Error(t('runtime.invalidModel'))
   const binding = { ...target.value }; delete binding.sessionId
+  delete binding.actualProvider; delete binding.actualModel
   if (binding.kind === 'hermes') delete binding.directory
   emit('bind', binding)
 })

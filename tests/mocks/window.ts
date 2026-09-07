@@ -50,6 +50,7 @@ const useWindowMock = (opts?: WindowMockOpts) => {
       list: vi.fn().mockResolvedValue([]),
       save: vi.fn(),
       catalog: vi.fn().mockResolvedValue({ profiles: [], agents: [], models: [] }),
+      setModelVisibility: vi.fn(),
       start: vi.fn(),
       get: vi.fn().mockResolvedValue(null),
       cancel: vi.fn(),

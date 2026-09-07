@@ -11,6 +11,72 @@ beforeEach(() => { state.home = fs.mkdtempSync(path.join(os.tmpdir(), 'summon-ru
 afterEach(() => { vi.unstubAllGlobals(); fs.rmSync(state.home, { recursive: true, force: true }) })
 const connection = { id: 'h', name: 'Hermes', endpoint: 'http://localhost:8642', kind: 'hermes' as const }
 
+test('Hermes loads the selected profile catalog, filters visibility and keeps refresh independent of saved preferences', async () => {
+  service.save({ ...connection, defaultProfile: 'research' }, 'test-secret')
+  const fetch = vi.fn(async () => Response.json({ provider: 'p', model: 'm1', providers: [
+    { slug: 'p', name: 'Provider', authenticated: true, models: ['m1', 'm2', 'new-model'], api_key: 'must-not-leak' },
+    { slug: 'other', authenticated: true, models: ['m1'] },
+    { slug: 'unconfigured', authenticated: false, models: ['hidden'] },
+  ] }))
+  vi.stubGlobal('fetch', fetch)
+  const binding = { connectionId: 'h', kind: 'hermes' as const }
+  service.setModelVisibility('h', { providers: ['p'], models: { p: ['m2'] } })
+  const catalog = await service.catalog(binding)
+  expect(fetch).toHaveBeenCalledWith('http://localhost:8642/p/research/api/model/options', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-secret' }) }))
+  expect(catalog.models.map(m => m.id)).toEqual(['m2'])
+  expect(catalog.providers).toEqual([{ id: 'p', name: 'Provider' }])
+  expect(catalog.defaults).toEqual({ provider: 'p', model: 'm1' })
+  const raw = await service.catalog(binding, { includeHidden: true })
+  expect(raw.models).toHaveLength(4)
+  expect(JSON.stringify(raw)).not.toContain('must-not-leak')
+  expect(fetch).toHaveBeenCalledTimes(1)
+  await service.catalog(binding, { includeHidden: true, refresh: true })
+  expect(fetch).toHaveBeenLastCalledWith('http://localhost:8642/p/research/api/model/options?refresh=true', expect.anything())
+  expect((await service.catalog(binding)).models.map(m => m.id)).toEqual(['m2'])
+})
+
+test('visibility survives service restart and connection edits without replacing encrypted credentials', async () => {
+  service.save(connection, 'test-secret')
+  const encrypted = JSON.parse(fs.readFileSync(path.join(state.home, 'runtime-connections.json'), 'utf8'))[0].encryptedSecret
+  service.setModelVisibility('h', { providers: [], models: { p: [] } })
+  service = new RuntimeService()
+  expect(service.list()[0]).toMatchObject({ modelVisibility: { providers: [], models: { p: [] } }, hasSecret: true })
+  service.save({ ...connection, name: 'Renamed', modelVisibility: { providers: ['stale'] } })
+  expect(service.list()[0].modelVisibility?.providers).toEqual([])
+  expect(JSON.parse(fs.readFileSync(path.join(state.home, 'runtime-connections.json'), 'utf8'))[0].encryptedSecret).toBe(encrypted)
+  const before = fs.readFileSync(path.join(state.home, 'runtime-connections.json'), 'utf8')
+  expect(() => service.setModelVisibility('h', { providers: [123] } as any)).toThrow()
+  expect(fs.readFileSync(path.join(state.home, 'runtime-connections.json'), 'utf8')).toBe(before)
+})
+
+test('OpenCode only offers connected providers and respects per-provider model selections', async () => {
+  service.save({ id: 'o', name: 'OpenCode', kind: 'opencode', endpoint: 'http://localhost:4096' })
+  vi.stubGlobal('fetch', vi.fn(async (address: string) => {
+    const url = new URL(address)
+    expect(url.searchParams.get('directory')).toBe('/tmp/project & name')
+    if (url.pathname === '/agent') return Response.json([{ name: 'plan' }, { name: 'hidden', hidden: true }, { name: 'worker', mode: 'subagent' }])
+    return Response.json({ connected: ['p', 'q'], all: [
+      { id: 'p', name: 'P', models: { same: { id: 'same', modalities: { input: ['image'] } } } },
+      { id: 'q', models: { same: { id: 'same' } } },
+      { id: 'unconfigured', models: { m: { id: 'm' } } },
+    ] })
+  }))
+  service.setModelVisibility('o', { models: { p: [] } })
+  const binding = { connectionId: 'o', kind: 'opencode' as const, directory: '/tmp/project & name' }
+  expect(await service.catalog(binding)).toMatchObject({ agents: ['plan'], models: [{ provider: 'q', id: 'same' }] })
+  expect((await service.catalog(binding, { includeHidden: true })).models.find(m => m.provider === 'p')?.vision).toBe(true)
+})
+
+test('a catalog authentication failure is not cached as an empty successful result', async () => {
+  service.save(connection)
+  const fetch = vi.fn().mockResolvedValueOnce(new Response('', { status: 401 })).mockResolvedValueOnce(Response.json({ providers: [] }))
+  vi.stubGlobal('fetch', fetch)
+  const binding = { connectionId: 'h', kind: 'hermes' as const }
+  await expect(service.catalog(binding)).rejects.toThrow('HTTP 401')
+  expect((await service.catalog(binding)).models).toEqual([])
+  expect(fetch).toHaveBeenCalledTimes(2)
+})
+
 test('credentials are omitted from renderer results and are dropped on an endpoint change', () => {
   const saved = service.save(connection, 'test-secret')
   expect(saved).toEqual({ ...connection, defaultProfile: 'default', hasSecret: true })

@@ -646,6 +646,23 @@ test('Runtime switch keeps configuration dropdowns inside the active chat compos
   expect(wrapper.findAll('.prompt .chat-configuration select')).toHaveLength(3)
 })
 
+test.each(['hermes', 'opencode'] as const)('%s model changes preserve an unsent draft and use a new conversation', async kind => {
+  vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'runtime', kind, name: 'Local', endpoint: 'http://localhost:8642' }])
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: [], agents: [], models: [{ provider: 'p', id: 'm1', name: 'M1' }, { provider: 'p', id: 'm2', name: 'M2' }] })
+  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
+  await wrapper.find('.prompt .chat-configuration select').setValue('runtime'); await flushPromises()
+  await wrapper.find('.runtime-chat textarea').setValue('Keep this draft')
+  const previous = wrapper.vm.assistant.chat
+  await wrapper.find('.runtime-composer .chat-configuration').findAll('select')[1].setValue('p'); await flushPromises()
+  expect(wrapper.find<HTMLTextAreaElement>('.runtime-chat textarea').element.value).toBe('Keep this draft')
+  expect(wrapper.vm.assistant.chat.uuid).not.toBe(previous.uuid)
+  expect(wrapper.vm.assistant.chat.runtime).toMatchObject({ provider: 'p', model: 'm1' })
+  await wrapper.find('.runtime-composer .chat-configuration').findAll('select')[2].setValue('m2'); await flushPromises()
+  expect(wrapper.find<HTMLTextAreaElement>('.runtime-chat textarea').element.value).toBe('Keep this draft')
+  expect(wrapper.vm.assistant.chat.runtime?.model).toBe('m2')
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+})
+
 
 const showQuickChat = async (fresh = false) => {
   const listener = vi.mocked(window.api._on).mock.calls.findLast(([name]) => name === 'screenshot-state')[1]

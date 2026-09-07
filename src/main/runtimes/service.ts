@@ -3,14 +3,16 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { RuntimeBinding, RuntimeCatalog, RuntimeConnection, RuntimeRun } from '../../types/runtime'
+import { RuntimeBinding, RuntimeCatalog, RuntimeCatalogOptions, RuntimeConnection, RuntimeModelVisibility, RuntimeRun } from '../../types/runtime'
 import { consumeSSE, runtimeURL, terminalRun } from './protocol'
+import { hermesCatalog, normalizeVisibility, opencodeCatalog, visibleCatalog } from './catalog'
 
 type SavedConnection = RuntimeConnection & { encryptedSecret?: string }
 type Execution = { run: RuntimeRun; connection: SavedConnection; owner: number; controller: AbortController; publish: (run: RuntimeRun) => void }
 
 export class RuntimeService {
   private executions = new Map<string, Execution>()
+  private catalogs = new Map<string, { expires: number; promise: Promise<RuntimeCatalog> }>()
   private file = () => path.join(app.getPath('userData'), 'runtime-connections.json')
   private connections(): SavedConnection[] {
     if (!fs.existsSync(this.file())) return []
@@ -35,6 +37,8 @@ export class RuntimeService {
       if (!secret) throw new Error('This profile has no API_SERVER_KEY in its .env file.')
     }
     const next: SavedConnection = { id: input.id || crypto.randomUUID(), name: input.name.trim() || input.kind, kind: input.kind, endpoint: input.endpoint.replace(/\/$/, ''), defaultProfile: input.kind === 'hermes' ? input.defaultProfile || 'default' : undefined }
+    // Connection edits and stale renderer drafts must not overwrite visibility preferences.
+    if (previous?.modelVisibility) next.modelVisibility = previous.modelVisibility
     // Never carry credentials to an edited endpoint automatically.
     if (previous?.endpoint === next.endpoint && previous.kind === next.kind) next.encryptedSecret = previous.encryptedSecret
     if (secret) {
@@ -45,7 +49,16 @@ export class RuntimeService {
     if (index === -1) connections.push(next)
     else connections[index] = next
     fs.writeFileSync(this.file(), JSON.stringify(connections, null, 2), { mode: 0o600 })
+    this.catalogs.clear()
     return this.list().find(c => c.id === next.id)!
+  }
+  setModelVisibility(connectionId: string, visibility: RuntimeModelVisibility): RuntimeConnection {
+    const connections = this.connections()
+    const connection = connections.find(c => c.id === connectionId)
+    if (!connection) throw new Error('Runtime connection is missing.')
+    connection.modelVisibility = normalizeVisibility(visibility)
+    fs.writeFileSync(this.file(), JSON.stringify(connections, null, 2), { mode: 0o600 })
+    return this.list().find(c => c.id === connectionId)!
   }
   private connection(binding: RuntimeBinding): SavedConnection {
     const c = this.connections().find(c => c.id === binding.connectionId)
@@ -66,19 +79,32 @@ export class RuntimeService {
     const response = await this.request(c, b, route, body)
     return response.status === 204 ? null : response.json()
   }
-  async catalog(binding: RuntimeBinding): Promise<RuntimeCatalog> {
+  async catalog(binding: RuntimeBinding, options: RuntimeCatalogOptions = {}): Promise<RuntimeCatalog> {
     const c = this.connection(binding)
+    const target = { ...binding, ...(c.kind === 'hermes' ? { profile: binding.profile || c.defaultProfile || 'default' } : {}) }
+    const key = JSON.stringify([c.id, c.endpoint, target.profile, target.directory])
+    let cached = this.catalogs.get(key)
+    if (!cached || cached.expires < Date.now() || options.refresh) {
+      const promise = this.loadCatalog(c, target, options.refresh)
+      cached = { expires: Date.now() + 30000, promise }
+      this.catalogs.set(key, cached)
+      void promise.catch(() => { if (this.catalogs.get(key)?.promise === promise) this.catalogs.delete(key) })
+    }
+    const catalog = await cached.promise
+    return options.includeHidden ? catalog : visibleCatalog(catalog, this.connection(binding).modelVisibility)
+  }
+  private async loadCatalog(c: SavedConnection, binding: RuntimeBinding, refresh = false): Promise<RuntimeCatalog> {
     if (c.kind === 'hermes') {
-      await this.json(c, binding, '/v1/models') // Validate the actual selected profile and its authentication.
       let profiles = ['default']
       if (['localhost', '127.0.0.1', '[::1]'].includes(new URL(c.endpoint).hostname)) {
         const folder = path.join(os.homedir(), '.hermes', 'profiles')
         if (fs.existsSync(folder)) profiles = profiles.concat(fs.readdirSync(folder, { withFileTypes: true }).filter(x => x.isDirectory() && !x.name.startsWith('.')).map(x => x.name))
       }
-      return { agents: [], profiles, models: [] }
+      const payload = await this.json(c, binding, `/api/model/options${refresh ? '?refresh=true' : ''}`)
+      return hermesCatalog(payload, profiles)
     }
     const [agents, providers] = await Promise.all([this.json(c, binding, '/agent'), this.json(c, binding, '/provider')])
-    return { profiles: [], agents: agents.filter((a: any) => a.mode !== 'subagent' && !a.hidden).map((a: any) => a.name), models: providers.all.filter((p: any) => providers.connected.includes(p.id)).flatMap((p: any) => Object.values(p.models).map((m: any) => ({ provider: p.id, id: m.id, name: m.name, vision: m.modalities?.input?.includes('image') ?? m.capabilities?.input?.image ?? false }))) }
+    return opencodeCatalog(providers, agents)
   }
   get(owner: number, chatId: string): RuntimeRun | null {
     return this.executions.get(`${owner}:${chatId}`)?.run || null

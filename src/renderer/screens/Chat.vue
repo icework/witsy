@@ -361,9 +361,20 @@ const onRuntimeBinding = (binding?: RuntimeBinding) => {
   latestChunk.value = null
 }
 
-const onChatConfiguration = (config: { runtime?: RuntimeBinding; engine?: string; model?: string }) => {
+const onChatConfiguration = async (config: { runtime?: RuntimeBinding; engine?: string; model?: string }) => {
+  const previous = assistant.value.chat
+  const pendingDraft = previous.runtime ? new Message('user', runtimeChat.value?.getPrompt() || '') : chatArea.value?.getDraft()
+  const agent = previous.chatAgent
   if (config.runtime || assistant.value.chat.runtime) onRuntimeBinding(config.runtime)
   if (!config.runtime) assistant.value.chat.setEngineModel(config.engine, config.model)
+  const current = assistant.value.chat
+  if (config.runtime && previous.runtime?.connectionId === config.runtime.connectionId) current.chatAgent = agent
+  current.temporary = previous.temporary
+  await nextTick()
+  if (pendingDraft && current.uuid === assistant.value.chat.uuid) {
+    if (current.runtime) runtimeChat.value?.setPrompt(pendingDraft.content)
+    else chatArea.value?.setPrompt(pendingDraft)
+  }
   if (assistant.value.chat.hasMessages() && !assistant.value.chat.temporary) store.saveHistory()
 }
 
