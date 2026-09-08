@@ -15,7 +15,6 @@ vi.mock('@main/window', () => ({
   openMainWindow: vi.fn(),
   openSettingsWindow: vi.fn(),
   openDesignStudioWindow: vi.fn(),
-  openAgentForgeWindow: vi.fn(),
   openRealtimeChatWindow: vi.fn(),
   openPromptAnywhere: vi.fn().mockResolvedValue(undefined),
   openCommandPicker: vi.fn(),
@@ -84,7 +83,7 @@ describe('HTTP Triggers', () => {
     expect(mockRegister).toHaveBeenCalledWith('/api/scratchpad', expect.any(Function))
     expect(mockRegister).toHaveBeenCalledWith('/api/settings', expect.any(Function))
     expect(mockRegister).toHaveBeenCalledWith('/api/studio', expect.any(Function))
-    expect(mockRegister).toHaveBeenCalledWith('/api/forge', expect.any(Function))
+    expect(mockRegister).not.toHaveBeenCalledWith('/api/forge', expect.any(Function))
     expect(mockRegister).toHaveBeenCalledWith('/api/realtime', expect.any(Function))
     expect(mockRegister).toHaveBeenCalledWith('/api/prompt', expect.any(Function))
     expect(mockRegister).toHaveBeenCalledWith('/api/command', expect.any(Function))
@@ -217,25 +216,6 @@ describe('HTTP Triggers', () => {
 
     expect(window.openDesignStudioWindow).toHaveBeenCalled()
     expect(mockRes.end).toHaveBeenCalledWith(JSON.stringify({ success: true, action: 'studio' }))
-  })
-
-  test('forge endpoint should open agent forge window', async () => {
-    installHttpTriggers(httpServer, mockApp)
-
-    const handler = mockRegister.mock.calls.find(
-      (call: any) => call[0] === '/api/forge'
-    )?.[1]
-
-    const mockReq = {} as IncomingMessage
-    const mockRes = {
-      writeHead: vi.fn(),
-      end: vi.fn()
-    } as unknown as ServerResponse
-
-    await handler(mockReq, mockRes, new URL('http://localhost:8090/api/forge'))
-
-    expect(window.openAgentForgeWindow).toHaveBeenCalled()
-    expect(mockRes.end).toHaveBeenCalledWith(JSON.stringify({ success: true, action: 'forge' }))
   })
 
   test('realtime endpoint should open realtime chat window', async () => {

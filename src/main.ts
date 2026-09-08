@@ -119,7 +119,6 @@ const installMenu = () => {
     scratchpad: () => window.openMainWindow({ queryParams: { view: 'scratchpad' } }),
     settings: window.openSettingsWindow,
     studio: window.openDesignStudioWindow,
-    forge: window.openAgentForgeWindow,
     backupExport: async () => await backup.exportBackup(app),
     backupImport: async () => await backup.importBackup(app, quitApp),
     importMarkdown: async () => await importMarkdown(app, settings.workspaceId),
@@ -139,7 +138,6 @@ const registerShortcuts = () => {
     scratchpad: () => window.openMainWindow({ queryParams: { view: 'scratchpad' } }),
     realtime: window.openRealtimeChatWindow,
     studio: window.openDesignStudioWindow,
-    forge: window.openAgentForgeWindow,
   });
   registerContextWorkflowShortcuts();
   keyMonitor?.reload();
@@ -269,7 +267,6 @@ app.whenReady().then(async () => {
       scratchpad: { onDown: () => {}, onUp: () => window.openMainWindow({ queryParams: { view: 'scratchpad' } }) },
       realtime: { onDown: () => {}, onUp: window.openRealtimeChatWindow },
       studio: { onDown: () => {}, onUp: window.openDesignStudioWindow },
-      forge: { onDown: () => {}, onUp: window.openAgentForgeWindow },
     });
     keyMonitor.start();
   }

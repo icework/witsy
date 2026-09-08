@@ -133,28 +133,6 @@
     "retry": "再試行",
     "runAgent": "エージェントを実行",
     "save": "保存",
-    "schedule": {
-      "at": "時刻",
-      "daily": "毎日",
-      "day_of_every": "毎…日",
-      "days_at": "日（時刻）",
-      "disabled": "無効",
-      "every": "毎…",
-      "friday": "金",
-      "hourly": "毎時",
-      "hours_on_minute": "時（分）",
-      "minutes": "分",
-      "monday": "月",
-      "monthly": "毎月",
-      "months": "月",
-      "on_the": "…に",
-      "saturday": "土",
-      "sunday": "日",
-      "thursday": "木",
-      "tuesday": "火",
-      "wednesday": "水",
-      "weekly": "毎週"
-    },
     "search": "検索…",
     "select": "選択",
     "selectAll": "すべて選択",
@@ -200,231 +178,16 @@
     "yes": "はい"
   },
   "agent": {
-    "copySuffix": "コピー",
     "create": {
-      "goal": {
-        "title": "エージェントの目標"
-      },
-      "information": {
-        "help": {
-          "description": "エージェントの目的の短い説明。モデルがエージェントの意図を理解するのに役立ちます。",
-          "goal": "エージェントの意思決定を導く個々の目標。",
-          "name": "エージェントに名前を付けてください。後で識別しやすくなります。",
-          "type": "エージェントの機能と他のエージェントとの関係。"
-        },
-        "promptInputs": "検出された変数",
-        "title": "一般情報",
-        "type": "役割"
-      },
-      "invocation": {
-        "missingInput": "[{name} が不足しています]",
-        "missingInputs": {
-          "cancelButtonText": "とりあえず保存",
-          "confirmButtonText": "変数を修正",
-          "text": "スケジューラによってトリガーされた際のエージェントの動作が未定義です。すべての変数に値を設定するか、プロンプトから変数を削除してください。",
-          "title": "一部のプロンプト変数が定義されていません"
-        },
-        "title": "エージェントトリガー",
-        "variables": "スケジュールされた呼び出しのプロンプト変数の値"
-      },
-      "llm": {
-        "help": {
-          "warning": "エージェントの実行はモデルごとの機能に大きく依存します。エージェント機能をサポートするモデルを選択してください。"
-        },
-        "showModelSettings": "詳細設定",
-        "title": "モデル設定"
-      },
-      "settings": {
-        "title": "高度なモデル設定"
-      },
       "workflow": {
-        "addStep": "ステップを追加",
-        "confirmDeleteStep": "このステップを本当に削除しますか？",
-        "createUserVariable": "Create custom variable",
-        "createVariable": {
-          "defaultPlaceholder": "Optional default value",
-          "defaultValue": "Default Value",
-          "defaultValueHelper": "Provide a default value",
-          "descPlaceholder": "Optional description",
-          "description": "Description",
-          "descriptionHelper": "The description will guide the user when prompted for a value",
-          "error": {
-            "nameDuplicate": "A variable named \"{name}\" already exists in this prompt.",
-            "nameRequired": "Variable name is required.",
-            "nameSystem": "The name \"{name}\" is reserved for system variables."
-          },
-          "name": "Variable Name",
-          "nameHelper": "Set a clear, descriptive name",
-          "namePlaceholder": "e.g. customerName, projectTitle"
-        },
-        "customAgents": "共同エージェント",
-        "customTools": "ツール",
-        "description": "@:{'common.description'}",
-        "docRepo": "ナレッジ",
-        "docReposCount": "{count} ナレッジベース",
-        "error": {
-          "emptyStepPrompt": "ステップ#{step}のプロンプトは空にできません。",
-          "missingDocRepo": "ステップ#{step}はナレッジベースを使用していますが、プロンプトに{'{'}{'{'}facts{'}'}{'}'}という変数が定義されていません。{'{'}{'{'}facts{'}'}{'}'}形式の変数をプロンプトに追加してください。",
-          "structuredOutput": "構造化出力スキーマの解析中にエラーが発生しました。"
-        },
-        "expert": "エキスパート",
-        "help": {
-          "connect": "前のステップの出力を{'{'}{'{'}output.#{'}'}{'}'}変数（例：ステップ1の出力には{'{'}{'{'}output.1{'}'}{'}'}）を使って接続します",
-          "description": "エージェント実行中の進捗状況の更新に説明が使われます。",
-          "docRepo": "Facts extracted from the collection will be appended to your prompt.",
-          "factsVarDesc": "Facts extracted from the collection",
-          "outputVarDesc": "ステップ#{step}の出力",
-          "prompt": "このワークフローのステップでエージェントに行ってほしいことを説明してください",
-          "title": "複数ステップのワークフローを設計します。各ステップの実行にはプロンプトテンプレートが使用されます。エージェント実行時にユーザーが提供した値に置き換えられる「変数」を含めることができます。変数は{'{'}{'{'}name:description:value{'}'}{'}'}の形式で定義してください（説明は値を入力する際のユーザーのガイドになります）。説明とデフォルト値はどちらも任意です。"
-        },
-        "insertSystemVariable": "Insert system variable",
-        "jsonSchema": "JSON…",
-        "step": "ステップ {step}",
-        "structuredOutput": {
-          "text": "このステップの期待される出力形式を定義するために、<a href=\"https://github.com/Kochava-Studios/witsy/wiki/Agents-JSON-format\" target=\"_blank\">簡単なJSONスキーマ</a>を指定してください。",
-          "title": "JSONスキーマ"
-        },
-        "systemVar": {
-          "previousStep": "前のステップの出力"
-        },
-        "title": "ワークフロー"
+        "docReposCount": "{count} ナレッジベース"
       }
     },
-    "description": "@:{'common.description'}",
-    "forge": {
-      "a2a": {
-        "import": {
-          "error": {
-            "text": "URLを確認し、A2Aサーバーが起動していることを確認してください。",
-            "title": "A2Aのインポート中にエラーが発生しました"
-          },
-          "text": "実験的な機能です！",
-          "title": "A2AのURLを入力してください"
-        },
-        "title": "A2Aエージェントをインポート"
-      },
-      "confirmDelete": "このエージェントを削除してもよろしいですか？",
-      "create": "新規エージェント",
-      "empty": {
-        "text": "エージェントフォージは、ワークフローを自動化し複雑なタスクを処理するためのカスタムAIエージェントを作成できます。大きな仕事を管理しやすいステップに分解し、自律的に実行する賢いアシスタントを持つようなものです。",
-        "title": "エージェントフォージへようこそ"
-      },
-      "import": {
-        "conflict": {
-          "createNew": "新規作成",
-          "overwrite": "上書きする",
-          "text": "このIDのエージェントはすでに存在します。どうしますか？",
-          "title": "エージェントはすでに存在します"
-        },
-        "error": {
-          "text": "選択されたファイルは有効なエージェントJSONファイルではありません。",
-          "title": "インポートエラー"
-        },
-        "toolNotFound": "ステップ {step}: ツール {tool} が見つかりません",
-        "warning": {
-          "text": "一部のツールが見つかりませんでした。必要なMCPサーバーがインストールされていることを確認し、エージェントの設定を見直してください：",
-          "title": "ツールが見つかりません"
-        }
-      },
-      "list": {
-        "empty": "まだこのタイプのエージェントは作成されていません。",
-        "runnable": "ユーザー起動型",
-        "support": "ユーティリティ"
-      },
-      "run": "実行",
-      "title": "エージェントフォージ",
-      "view": "表示",
-      "viewCards": "カード表示",
-      "viewTable": "テーブル表示"
-    },
-    "goal": "目標",
-    "help": {
-      "clearHistory": "このエージェントのすべての履歴をクリアする",
-      "delete": "このエージェントを削除する",
-      "deleteRun": "この実行を削除する",
-      "duplicate": "このエージェントを複製する",
-      "edit": "このエージェントを編集する",
-      "export": "エージェントをエクスポート",
-      "import": "エージェントをインポート",
-      "run": "このエージェントを実行する",
-      "startedJustNow": "たった今開始",
-      "startedSecondsAgo": "{seconds}秒前に開始",
-      "stop": "実行中のエージェントを停止",
-      "stopExecution": "インスタンス{index}を停止",
-      "stopExecutionTime": "{time}に開始",
-      "stopThisRun": "この実行を停止",
-      "view": "エージェントの詳細を表示する"
-    },
-    "history": {
-      "confirmClear": "このエージェントの履歴を削除してもよろしいですか？",
-      "confirmDeleteMultiple": "これらの実行を削除してもよろしいですか？",
-      "confirmDeleteSingle": "この実行を削除してもよろしいですか？",
-      "empty": "履歴はまだありません…",
-      "lastRun": "最終実行",
-      "neverRun": "未実行",
-      "running": "実行中…"
-    },
-    "info": {
-      "failed": "失敗",
-      "nextRun": "次の実行",
-      "successful": "成功",
-      "successRate": "成功率",
-      "totalRuns": "合計実行回数"
-    },
-    "name": "@:{'common.name'}",
     "picker": {
       "noAgents": "利用可能なエージェントがありません",
-      "noAgentsText": "今すぐ作成しますか？",
       "noAgentsTitle": "まだ実行可能なエージェントを作成していません",
       "title": "実行するエージェントを選択"
-    },
-    "run": {
-      "createdAt": "開始時間",
-      "details": "詳細",
-      "duration": "所要時間",
-      "error": "@:{'common.error'}",
-      "output": "出力",
-      "outputItem": "ステップ {index}",
-      "selectRun": "実行を選択して詳細を表示",
-      "stepRunning": "ステップ実行中…",
-      "trigger": "トリガー",
-      "updatedAt": "完了時間"
-    },
-    "status": {
-      "canceled": "キャンセル済み",
-      "cancelled": "キャンセル済み",
-      "error": "エラー",
-      "running": "実行中",
-      "success": "成功"
-    },
-    "step": {
-      "toolCalls": "ツール呼び出し"
-    },
-    "trigger": {
-      "manual": "手動",
-      "manual_description": "エージェントは常に手動でトリガーできます",
-      "nextRuns": "次回実行予定",
-      "schedule": "スケジュール",
-      "webhook": "ウェブフック",
-      "webhook_copy": "URLをコピー",
-      "webhook_description": "HTTPリクエストでこのエージェントをトリガーします",
-      "webhook_regenerate": "トークンを再生成",
-      "webhook_url": "ウェブフックURL",
-      "workflow": "ワークフロー"
-    },
-    "type": {
-      "runnable": "ユーザー起動型",
-      "support": "ユーティリティ"
-    },
-    "view": {
-      "filter": {
-        "all": "すべての実行",
-        "exclude_workflow": "ワークフローを除外"
-      }
     }
-  },
-  "agentSelector": {
-    "title": "代理エージェントを選択"
   },
   "automation": {
     "commander": {
@@ -488,7 +251,6 @@
     },
     "editPlaceholder": "メッセージを編集...",
     "empty": {
-      "agentForge": "エージェントを作成して、タスクを自動化し、ワークフローを効率化しましょう！",
       "docRepo": "ドキュメントをインデックス化して、@:{'common.appName'}をあなたの知識の基盤にしましょう！",
       "greeting": "こんにちは、どのようにお手伝いできますか？",
       "mcpServers": "@:{'common.appName'} があなたの環境と連携できるように、MCPサーバーを接続しましょう！"
@@ -1283,7 +1045,6 @@
       "title": "編集"
     },
     "file": {
-      "agentForge": "@:{'agent.forge.title'}",
       "backupExport": "データと設定をバックアップ…",
       "backupImport": "バックアップを復元…",
       "closeWindow": "ウィンドウを閉じる",

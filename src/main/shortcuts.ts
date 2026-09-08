@@ -32,7 +32,6 @@ export const registerShortcuts = (app: App, callbacks: ShortcutCallbacks): void 
   registerShortcut('audioBooth', config.shortcuts.audioBooth, callbacks.audioBooth);
   registerShortcut('realtime', config.shortcuts.realtime, callbacks.realtime);
   registerShortcut('studio', config.shortcuts.studio, callbacks.studio);
-  registerShortcut('forge', config.shortcuts.forge, callbacks.forge);
 
 }
 

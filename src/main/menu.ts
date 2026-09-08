@@ -14,7 +14,6 @@ export type MenuCallbacks = {
   openMain: (opts?: CreateWindowOpts) => void
   scratchpad: () => void
   studio: () => void
-  forge: () => void
   backupExport: () => void
   backupImport: () => void
   importMarkdown: () => void
@@ -111,11 +110,6 @@ const template = (app: App, callbacks: MenuCallbacks, shortcuts: ShortcutsConfig
           label: t('menu.file.designStudio'),
           accelerator: shortcutAccelerator(shortcuts?.studio),
           click: () => callbacks.studio()
-        },
-        {
-          label: t('menu.file.agentForge'),
-          accelerator: shortcutAccelerator(shortcuts?.forge),
-          click: () => callbacks.forge()
         },
         { type: 'separator' },
         {

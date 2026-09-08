@@ -28,3 +28,10 @@ test('Fullscreen image', async () => {
   expect(wrapper.find('.fullscreen').exists()).toBe(false)
   expect(window.api.app.fullscreen).toHaveBeenLastCalledWith('main', false)
 })
+
+test('Retired view links fall back to chat', async () => {
+  const wrapper = mount(Main, { props: { extra: { view: 'agents' } } })
+  await wrapper.vm.$nextTick()
+  expect(wrapper.findComponent({ name: 'Chat' }).props('active')).toBe(true)
+  expect(window.api.main.updateMode).toHaveBeenLastCalledWith('chat')
+})

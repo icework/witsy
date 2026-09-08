@@ -114,28 +114,6 @@
     "retry": "Réessayer",
     "runAgent": "Exécuter l'agent",
     "save": "Sauvegarder",
-    "schedule": {
-      "at": "à",
-      "daily": "Quotidien",
-      "day_of_every": "jour de chaque",
-      "days_at": "jour(s), à",
-      "disabled": "Désactivé",
-      "every": "Chaque",
-      "friday": "Ven",
-      "hourly": "Toutes les heures",
-      "hours_on_minute": "heure(s) à la minute",
-      "minutes": "Minutes",
-      "monday": "Lun",
-      "monthly": "Mensuel",
-      "months": "mois",
-      "on_the": "Le",
-      "saturday": "Sam",
-      "sunday": "Dim",
-      "thursday": "Jeu",
-      "tuesday": "Mar",
-      "wednesday": "Mer",
-      "weekly": "Hebdomadaire"
-    },
     "search": "Rechercher…",
     "select": "Sélectionner",
     "selectAll": "Tout sélectionner",
@@ -181,231 +159,16 @@
     "yes": "Oui"
   },
   "agent": {
-    "copySuffix": "Copier",
     "create": {
-      "goal": {
-        "title": "Objectif de l'Agent"
-      },
-      "information": {
-        "help": {
-          "description": "Brève description de l'objectif de votre agent. Aide les modèles à comprendre l'intention de l'agent.",
-          "goal": "L'objectif individuel qui guide la prise de décision de l'agent.",
-          "name": "Donnez un nom à votre agent. Cela vous aidera à l'identifier plus tard.",
-          "type": "La fonction de l'agent et sa relation avec les autres agents."
-        },
-        "promptInputs": "Variables détectées",
-        "title": "Informations Générales",
-        "type": "Rôle"
-      },
-      "invocation": {
-        "missingInput": "[{name} est manquant]",
-        "missingInputs": {
-          "cancelButtonText": "Enregistrer quand même",
-          "confirmButtonText": "Corriger les variables",
-          "text": "Le comportement de votre agent lorsqu'il est déclenché par le planificateur est indéfini. Vous devez soit définir des valeurs pour toutes les variables, soit les supprimer du prompt.",
-          "title": "Certaines de vos variables de prompt ne sont pas définies"
-        },
-        "title": "Déclencheurs de l'Agent",
-        "variables": "Valeurs des variables du prompt pour les déclenchements programmés"
-      },
-      "llm": {
-        "help": {
-          "warning": "L'exécution de l'agent dépend fortement des capacités de chaque modèle. Assurez-vous de sélectionner un modèle qui supporte les capacités agentiques."
-        },
-        "showModelSettings": "Paramètres Avancés",
-        "title": "Configuration du Modèle"
-      },
-      "settings": {
-        "title": "Paramètres Avancés du Modèle"
-      },
       "workflow": {
-        "addStep": "Ajouter une étape",
-        "confirmDeleteStep": "Êtes-vous sûr de vouloir supprimer cette étape ?",
-        "createUserVariable": "Créer une variable personnalisée",
-        "createVariable": {
-          "defaultPlaceholder": "Valeur par défaut optionnelle",
-          "defaultValue": "Valeur par défaut",
-          "defaultValueHelper": "Fournissez une valeur par défaut",
-          "descPlaceholder": "Description optionnelle",
-          "description": "Description",
-          "descriptionHelper": "La description guidera l'utilisateur lors de la saisie d'une valeur",
-          "error": {
-            "nameDuplicate": "Une variable nommée « {name} » existe déjà dans cette invite.",
-            "nameRequired": "Le nom de la variable est requis.",
-            "nameSystem": "Le nom « {name} » est réservé aux variables système."
-          },
-          "name": "Nom de la variable",
-          "nameHelper": "Donnez un nom clair et descriptif",
-          "namePlaceholder": "ex. customerName, projectTitle"
-        },
-        "customAgents": "Co-Agents",
-        "customTools": "Outils",
-        "description": "@:{'common.description'}",
-        "docRepo": "Connaissances",
-        "docReposCount": "{count} bases de connaissances",
-        "error": {
-          "emptyStepPrompt": "L'invite de l’étape #{step} ne peut pas être vide.",
-          "missingDocRepo": "L'étape #{step} utilise une base de connaissances mais aucune variable {'{'}{'{'}facts{'}'}{'}'} n'est définie dans l'invite. Veuillez ajouter une variable de la forme {'{'}{'{'}facts{'}'}{'}'} à votre invite.",
-          "structuredOutput": "Erreur lors de l'analyse du schéma de sortie structurée."
-        },
-        "expert": "Expert",
-        "help": {
-          "connect": "Connectez la sortie des étapes précédentes en utilisant les variables {'{'}{'{'}output.#{'}'}{'}'} (par exemple {'{'}{'{'}output.1{'}'}{'}'} pour la sortie de l’étape 1)",
-          "description": "La description sera utilisée pour fournir des mises à jour de progression durant l'exécution de l'agent",
-          "docRepo": "Facts extracted from the collection will be appended to your prompt.",
-          "factsVarDesc": "Facts extracted from the collection",
-          "outputVarDesc": "Sortie de l'étape #{step}",
-          "prompt": "Décrivez ce que vous souhaitez que l'agent fasse à cette étape de votre flux de travail",
-          "title": "Concevez votre flux de travail multi-étapes. Des modèles d'invite seront utilisés pour exécuter chaque étape. Vous pouvez inclure des « variables » qui seront remplacées par les valeurs fournies par l'utilisateur lors de l'exécution de l'agent. Utilisez le format {'{'}{'{'}nom:description:valeur{'}'}{'}'} pour définir une variable (la description guidera l'utilisateur lorsqu'il sera invité à fournir une valeur). La description et la valeur par défaut sont toutes deux optionnelles."
-        },
-        "insertSystemVariable": "Insérer une variable système",
-        "jsonSchema": "JSON…",
-        "step": "Étape {step}",
-        "structuredOutput": {
-          "text": "Spécifiez un <a href=\"https://github.com/Kochava-Studios/witsy/wiki/Agents-JSON-format\" target=\"_blank\">schéma JSON simple</a> pour définir le format de sortie attendu de cette étape.",
-          "title": "Schéma JSON"
-        },
-        "systemVar": {
-          "previousStep": "Sortie des étapes précédentes"
-        },
-        "title": "Flux de travail"
+        "docReposCount": "{count} bases de connaissances"
       }
     },
-    "description": "@:{'common.description'}",
-    "forge": {
-      "a2a": {
-        "import": {
-          "error": {
-            "text": "Vérifiez l'URL et assurez-vous que le serveur A2A est actif et fonctionne.",
-            "title": "Erreur lors de l'importation A2A"
-          },
-          "text": "FONCTIONNALITÉ EXPÉRIMENTALE !",
-          "title": "Entrez l'URL de A2A"
-        },
-        "title": "Importer un Agent A2A"
-      },
-      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet agent ?",
-      "create": "Nouvel Agent",
-      "empty": {
-        "text": "Agent Forge vous permet de créer des agents IA personnalisés pour automatiser vos flux de travail et gérer des tâches complexes. Pensez-y comme à un assistant intelligent capable de décomposer les gros travaux en étapes gérables et de les exécuter de manière autonome.",
-        "title": "Bienvenue dans l'Agent Forge"
-      },
-      "import": {
-        "conflict": {
-          "createNew": "Créer nouveau",
-          "overwrite": "Écraser",
-          "text": "Un agent avec cet ID existe déjà. Que souhaitez-vous faire ?",
-          "title": "L'agent existe déjà"
-        },
-        "error": {
-          "text": "Le fichier sélectionné n'est pas un fichier JSON d'agent valide.",
-          "title": "Erreur d'importation"
-        },
-        "toolNotFound": "Étape {step} : outil {tool} non trouvé",
-        "warning": {
-          "text": "Certains outils n'ont pas pu être trouvés. Veuillez vous assurer que les serveurs MCP requis sont installés et revoir la configuration de l'agent :",
-          "title": "Outils non trouvés"
-        }
-      },
-      "list": {
-        "empty": "Aucun agent de ce type créé pour le moment.",
-        "runnable": "Initié par l'utilisateur",
-        "support": "Utilitaire"
-      },
-      "run": "Exécuter",
-      "title": "Forge d'agent",
-      "view": "Afficher",
-      "viewCards": "Vue en cartes",
-      "viewTable": "Vue en tableau"
-    },
-    "goal": "Objectif",
-    "help": {
-      "clearHistory": "Effacer tout l'historique pour cet agent",
-      "delete": "Supprimer cet agent",
-      "deleteRun": "Supprimer cette exécution",
-      "duplicate": "Dupliquer cet agent",
-      "edit": "Modifier cet agent",
-      "export": "Exporter l'agent",
-      "import": "Importer l'agent",
-      "run": "Exécuter cet agent",
-      "startedJustNow": "Démarré à l'instant",
-      "startedSecondsAgo": "Démarré il y a {seconds}s",
-      "stop": "Arrêter l'agent en cours",
-      "stopExecution": "Arrêter l'instance {index}",
-      "stopExecutionTime": "Démarré {time}",
-      "stopThisRun": "Arrêter cette exécution",
-      "view": "Voir les détails de l'agent"
-    },
-    "history": {
-      "confirmClear": "Êtes-vous sûr de vouloir effacer l'historique de cet agent ?",
-      "confirmDeleteMultiple": "Êtes-vous sûr de vouloir supprimer ces exécutions ?",
-      "confirmDeleteSingle": "Êtes-vous sûr de vouloir supprimer cette exécution ?",
-      "empty": "Pas encore d'historique…",
-      "lastRun": "Dernière Exécution",
-      "neverRun": "Jamais",
-      "running": "En cours…"
-    },
-    "info": {
-      "failed": "échecs",
-      "nextRun": "Prochaine exécution",
-      "successful": "réussites",
-      "successRate": "Taux de réussite",
-      "totalRuns": "Nombre total d'exécutions"
-    },
-    "name": "@:{'common.name'}",
     "picker": {
       "noAgents": "Aucun agent disponible",
-      "noAgentsText": "Voulez-vous en créer un maintenant ?",
       "noAgentsTitle": "Vous n'avez pas encore créé d'agents exécutables",
       "title": "Sélectionnez l'agent à exécuter"
-    },
-    "run": {
-      "createdAt": "Heure de début",
-      "details": "Détails",
-      "duration": "Durée",
-      "error": "@:{'common.error'}",
-      "output": "Sortie",
-      "outputItem": "Étape {index}",
-      "selectRun": "Sélectionnez une exécution pour voir les détails",
-      "stepRunning": "Étape en cours…",
-      "trigger": "Déclencheur",
-      "updatedAt": "Heure de fin"
-    },
-    "status": {
-      "canceled": "Annulé",
-      "cancelled": "Annulé",
-      "error": "Erreur",
-      "running": "En cours",
-      "success": "Succès"
-    },
-    "step": {
-      "toolCalls": "Appels d'outils"
-    },
-    "trigger": {
-      "manual": "Manuel",
-      "manual_description": "Les agents peuvent toujours être déclenchés manuellement",
-      "nextRuns": "Prochaines exécutions",
-      "schedule": "Planification",
-      "webhook": "Webhook",
-      "webhook_copy": "Copier l’URL",
-      "webhook_description": "Déclenchez cet agent via une requête HTTP",
-      "webhook_regenerate": "Régénérer le jeton",
-      "webhook_url": "URL du Webhook",
-      "workflow": "Flux de travail"
-    },
-    "type": {
-      "runnable": "Initié par l'utilisateur",
-      "support": "Utilitaire"
-    },
-    "view": {
-      "filter": {
-        "all": "Tous les lancements",
-        "exclude_workflow": "Exclure les workflows"
-      }
     }
-  },
-  "agentSelector": {
-    "title": "Sélectionnez les agents délégués"
   },
   "automation": {
     "commander": {
@@ -469,7 +232,6 @@
     },
     "editPlaceholder": "Modifier le message...",
     "empty": {
-      "agentForge": "Créez des agents pour automatiser vos tâches et optimiser vos flux de travail !",
       "docRepo": "Indexez vos documents et ancrez @:{'common.appName'} dans votre savoir !",
       "greeting": "Salut, comment puis-je vous aider ?",
       "mcpServers": "Connectez les serveurs MCP pour permettre à @:{'common.appName'} d'interagir avec votre environnement !"
@@ -1264,7 +1026,6 @@
       "title": "Édition"
     },
     "file": {
-      "agentForge": "@:{'agent.forge.title'}",
       "backupExport": "Sauvegarder les données et les paramètres…",
       "backupImport": "Restaurer la sauvegarde…",
       "closeWindow": "Fermer la fenêtre",

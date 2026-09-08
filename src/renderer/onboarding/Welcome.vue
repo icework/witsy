@@ -36,11 +36,6 @@
         <span class="feature-text">{{ t('transcribe.title') }}</span>
       </div>
 
-      <div class="feature" :style="{ '--delay': '1.0s' }">
-        <AgentIcon class="feature-icon" />
-        <span class="feature-text">{{ t('agent.forge.title') }}</span>
-      </div>
-
     </main>
 
   </section>
@@ -50,7 +45,6 @@
 <script setup lang="ts">
 
 import { MessageSquareQuoteIcon, MicIcon, NotebookPenIcon, PaletteIcon, TelescopeIcon } from 'lucide-vue-next'
-import AgentIcon from '@assets/agent.svg?component'
 import { t } from '@services/i18n'
 
 </script>
@@ -65,29 +59,30 @@ section {
   header {
 
     .logo {
-      width: 8rem;
-      height: 8rem;
+      width: calc(var(--space-24) * 2);
+      height: calc(var(--space-24) * 2);
     }
 
     h1 {
-      padding-top: 1rem;
+      padding-top: var(--space-12);
     }
 
     h3 {
-      padding: 2rem 6rem !important;
+      padding: var(--space-16) var(--space-12) !important;
     }
 
   }
 
   main {
 
-    flex: inherit !important;
-    display: flex;
-    flex-direction: row !important;
+    flex: 0 0 auto !important;
+    height: auto;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: flex-start !important;
     justify-content: center;
-    overflow-y: hidden !important;
-    gap: 5rem;
+    overflow: visible !important;
+    gap: var(--space-12);
 
     .feature {
       --delay: 0s;
@@ -96,9 +91,9 @@ section {
       align-items: center;
       font-size: 1.2rem;
       gap: 1rem;
-      width: 4rem;
+      min-width: 0;
       text-align: center;
-      opacity: 0.65;
+      color: var(--dimmed-text-color);
 
       .feature-icon {
         width: 2rem;

@@ -4,18 +4,20 @@
   .engines-grid {
     
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0rem 4rem;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 0 var(--space-16);
     
     .engine {
 
       display: flex;
       align-items: center;
       padding: 0rem;
-      gap: 2rem;
+      gap: var(--space-12);
+      min-width: 0;
 
       .brand {
-        width: 4rem;
+        flex: 0 0 var(--space-32);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -32,7 +34,8 @@
 
       .config {
         
-        width: 250px;
+        flex: 1;
+        min-width: 0;
         padding-top: 0.5rem;
 
         .loader {
@@ -68,7 +71,9 @@
       }
 
       &:deep() input {
-        width: 250px !important;
+        width: 100% !important;
+        min-width: 0;
+        box-sizing: border-box;
       }
       
     }

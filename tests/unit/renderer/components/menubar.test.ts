@@ -225,3 +225,11 @@ test('MenuBar respects both global feature flags and hiddenFeatures', () => {
   // voiceMode hidden via global feature flag
   expect(wrapper.find('[action="voice-mode"]').exists()).toBe(false)
 })
+
+test('Remaining navigation works with all features enabled', async () => {
+  store.isFeatureEnabled = () => true
+  const wrapper = mount(MenuBar)
+  expect(wrapper.findAllComponents({ name: 'MenuBarItem' }).some(item => item.props('action') === 'agents')).toBe(false)
+  await wrapper.findAllComponents({ name: 'MenuBarItem' }).find(item => item.props('action') === 'context-workflows')!.trigger('click')
+  expect(wrapper.emitted('change')).toContainEqual(['context-workflows'])
+})

@@ -71,13 +71,6 @@ export interface RunningRunInfo {
 // Running runs grouped by agent
 export type RunningAgentRuns = Record<string, RunningRunInfo[]>
 
-// Execution info used in renderer components
-export interface AgentExecution {
-  agent: Agent
-  runId: string
-  startTime: number
-}
-
 export interface AgentInfo {
   name: string
   steps: { description?: string }[]

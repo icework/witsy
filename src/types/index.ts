@@ -18,7 +18,7 @@ import { YoutubeVideoInfo } from '../main/youtube'
 export type strDict = Record<string, string>
 export type anyDict = Record<string, any>
 
-export type MainWindowMode = 'none' | 'chat' | 'context-workflows' | 'studio' | 'scratchpad' | 'booth' | 'agents' | 'voice-mode' | 'docrepos' | 'mcp' | 'settings' | `webapp-${string}`
+export type MainWindowMode = 'none' | 'chat' | 'context-workflows' | 'studio' | 'scratchpad' | 'booth' | 'voice-mode' | 'docrepos' | 'mcp' | 'settings' | `webapp-${string}`
 
 export type ScratchpadHeader = {
   uuid: string
@@ -484,7 +484,6 @@ declare global {
         export(workspaceId: string): boolean
       }
       agents: {
-        forge(): void
         list(workspaceId: string): any[]
         load(workspaceId: string, agentId: string): Agent|null
         save(workspaceId: string, agent: Agent): boolean

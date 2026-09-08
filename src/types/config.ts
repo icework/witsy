@@ -216,7 +216,6 @@ export type ShortcutsConfig = {
   audioBooth: Shortcut
   realtime: Shortcut
   studio: Shortcut
-  forge: Shortcut
 }
 
 export type ScratchpadConfig = {

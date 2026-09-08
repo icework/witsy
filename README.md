@@ -199,7 +199,6 @@ All endpoints support both `GET` (with query parameters) and `POST` (with JSON o
 | `GET/POST /api/scratchpad` | Open scratchpad | - |
 | `GET/POST /api/settings` | Open settings window | - |
 | `GET/POST /api/studio` | Open design studio | - |
-| `GET/POST /api/forge` | Open agent forge | - |
 | `GET/POST /api/realtime` | Open realtime chat (voice mode) | - |
 | `GET/POST /api/prompt` | Trigger Prompt Anywhere | `text` - Pre-fill prompt |
 | `GET/POST /api/command` | Trigger AI command picker | `text` - Pre-fill command text |
@@ -399,13 +398,7 @@ Agent webhooks allow you to trigger agent execution via HTTP requests, enabling 
 
 #### How It Works
 
-**Setting up a webhook:**
-1. Open the Agent Forge and select or create an agent
-2. Navigate to the "Invocation" tab (last step in the wizard)
-3. Check the "🌐 Webhook" checkbox
-4. A unique 8-character token is automatically generated for your agent
-5. Copy the webhook URL displayed (format: `http://localhost:{port}/api/agent/run/{token}`)
-6. You can regenerate the token at any time using the refresh button
+Existing agents with a configured webhook token continue to support the endpoints below.
 
 **Using the webhook:**
 - Send GET or POST requests to the webhook URL

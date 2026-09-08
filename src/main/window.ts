@@ -4,7 +4,6 @@ export * from './windows/commands';
 export * from './windows/computer';
 export * from './windows/debug';
 export * from './windows/dictation';
-export * from './windows/forge';
 export * from './windows/index';
 export * from './windows/main';
 export * from './windows/readaloud';

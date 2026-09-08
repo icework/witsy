@@ -36,9 +36,6 @@ import { t } from '@services/i18n'
 import { store } from '@services/store'
 import { Agent } from 'types/agents'
 
-import useEventBus from '@composables/event_bus'
-const { emitBusEvent } = useEventBus()
-
 const dialog = ref(null)
 let resolveCallback: ((agent: Agent | null) => void) | null = null
 
@@ -72,13 +69,7 @@ defineExpose({
     if (runnableAgents.value.length === 0) {
       Dialog.show({
         title: t('agent.picker.noAgentsTitle'),
-        text: t('agent.picker.noAgentsText'),
-        confirmButtonText: t('common.yes'),
-        showCancelButton: true,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          emitBusEvent('set-main-window-mode', 'agents')
-        }
+        confirmButtonText: t('common.ok'),
       })
       return Promise.resolve(null)
     }

@@ -4,7 +4,7 @@
 
   <div class="onboarding" v-bind="$attrs">
 
-    <div class="close"><XIcon @click="$emit('close')" /></div>
+    <button class="close" :aria-label="t('common.close')" @click="$emit('close')"><XIcon /></button>
 
     <div class="language-selector" v-if="step === 0">
       <div class="localeUI">
@@ -154,7 +154,10 @@ const notifyVisible = () => {
   --onboarding-bg-color: var(--background-color);/*rgb(255, 254, 255);*/
   
   position: absolute;
-  width: var(--onboarding-width);
+  box-sizing: border-box;
+  width: min(calc(var(--onboarding-width) + 2 * var(--space-32)), calc(100vw - 2 * var(--space-12)));
+  display: flex;
+  flex-direction: column;
   top: 10%;
   bottom: 10%;
   left: 50%;
@@ -162,9 +165,8 @@ const notifyVisible = () => {
   border-radius: 1rem;
   z-index: 20;
   background-color: var(--onboarding-bg-color);
-  border-color: 1px solid var(--dialog-border-color);
-  padding: 4rem;
-  padding-top: 3rem;
+  border: 1px solid var(--dialog-border-color);
+  padding: var(--space-32) clamp(var(--space-12), 4vw, var(--space-24)) var(--space-16);
   color: var(--text-color);
 
   .close {
@@ -172,6 +174,10 @@ const notifyVisible = () => {
     top: 1.25rem;
     right: 1.5rem;
     cursor: pointer;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
   }
 
   .language-selector {
@@ -183,7 +189,8 @@ const notifyVisible = () => {
 
   .container {
     overflow: hidden;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
   }
   
   main {
@@ -192,8 +199,8 @@ const notifyVisible = () => {
     flex-direction: row;
     align-items: flex-start;
     justify-content: flex-start;
-    margin-bottom: 3rem;
-    height: calc(100% - 3rem);
+    margin-bottom: 0;
+    height: 100%;
     width: 100%;
 
     transition: all 0.3s ease;
@@ -203,7 +210,10 @@ const notifyVisible = () => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-width: var(--onboarding-width);
+      flex: 0 0 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      overflow-y: auto;
       height: 100%;
 
       header {
@@ -246,9 +256,8 @@ const notifyVisible = () => {
   footer {
     width: 100%;
     display: flex;
-    button {
-      outline: none;
-    }
+    flex-shrink: 0;
+    padding-top: var(--space-12);
     .next, .last {
       margin-left: auto;
     }

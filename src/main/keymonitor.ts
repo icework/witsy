@@ -241,7 +241,6 @@ export default class KeyMonitor {
       audioBooth: 'audioBooth',
       realtime: 'realtime',
       studio: 'studio',
-      forge: 'forge',
     }
 
     for (const [name, shortcut] of Object.entries(shortcuts) as [keyof ShortcutsConfig, Shortcut][]) {

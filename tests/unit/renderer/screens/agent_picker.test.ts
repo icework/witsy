@@ -6,6 +6,7 @@ import { stubTeleport } from '@tests/mocks/stubs'
 import { store } from '@services/store'
 import Agent from '@models/agent'
 import AgentPicker from '@screens/AgentPicker.vue'
+import Dialog from '@renderer/utils/dialog'
 
 enableAutoUnmount(afterEach)
 
@@ -306,7 +307,8 @@ describe('AgentPicker', () => {
     await pickPromise // Wait for promise to resolve
   })
 
-  test('pick method with no agents shows dialog', async () => {
+  test('pick method with no agents shows an informational dialog', async () => {
+    const showDialog = vi.spyOn(Dialog, 'show').mockResolvedValue({ isConfirmed: true } as any)
     // Test with no runnable agents (empty array)
     const wrapper = mount_component([])
     
@@ -317,6 +319,11 @@ describe('AgentPicker', () => {
     // Call pick with no agents - should return null immediately
     const result = await exposedMethods.pick()
     expect(result).toBeNull()
+    expect(showDialog).toHaveBeenCalledWith({
+      title: 'agent.picker.noAgentsTitle',
+      confirmButtonText: 'common.ok',
+    })
+    showDialog.mockRestore()
     
     // Since there are no agents, resolveCallback should not be set
     expect(componentInstance.resolveCallback).toBeNull()

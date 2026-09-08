@@ -221,7 +221,6 @@ const useWindowMock = (opts?: WindowMockOpts) => {
       export: vi.fn(),
     },
     agents: {
-      forge: vi.fn(),
       list: vi.fn(() => [
         Agent.fromJson({
           uuid: 'agent1',

@@ -352,10 +352,6 @@ export const installIpc = (
     event.returnValue = chat || null;
   });
 
-  ipcMain.on(IPC.AGENTS.OPEN_FORGE,  () => {
-    //window.openAgentForgeWindow();
-  });
-
   ipcMain.on(IPC.AGENTS.LIST, (event, workspaceId) => {
     event.returnValue = JSON.stringify(agents.listAgents(app, workspaceId));
   });

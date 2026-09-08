@@ -59,11 +59,6 @@
 
       <div class="flex-push"></div>
 
-      <MenuBarItem action="agents" :active="mode === 'agents'" @click="emit('change', 'agents')" v-if="store.isFeatureEnabled('agents')">
-        <IconAgent />
-        <span>{{ t('agent.forge.title') }}</span>
-      </MenuBarItem>
-
       <MenuBarItem action="mcp" :active="mode === 'mcp'" @click="emit('change', 'mcp')" v-if="hasMcp">
         <PlugIcon />
         <span>{{ t('mcp.mcpServers') }}</span>
@@ -97,7 +92,6 @@ import ContextMenu from '@imengyu/vue3-context-menu'
 import '@imengyu/vue3-context-menu/lib/vue3-context-menu.css'
 import { FileTextIcon, HeadsetIcon, LightbulbIcon, MenuIcon, MicIcon, MouseIcon, PaletteIcon, PlugIcon, SettingsIcon, WorkflowIcon, icons } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
-import IconAgent from '@assets/agent.svg?component'
 import IconChat from '@assets/message-circle-3.svg?component'
 import ButtonIcon from '@components/ButtonIcon.vue'
 import useAppearanceTheme from '@composables/appearance_theme'

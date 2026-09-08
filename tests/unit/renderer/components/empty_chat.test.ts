@@ -146,9 +146,9 @@ test('Shows fallback shortcuts when no agents exist', async () => {
   const wrapper: VueWrapper<any> = mount(EmptyChat)
   await nextTick()
 
-  // Should show fallback shortcuts (Agent Forge, MCP Servers, Doc Repo)
+  // Should show the remaining MCP Servers and Doc Repo shortcuts
   const shortcuts = wrapper.findAllComponents({ name: 'HomeShortcut' })
-  expect(shortcuts.length).toBe(3)
+  expect(shortcuts.map(shortcut => shortcut.props('name'))).toEqual(['mcp.mcpServers', 'common.docRepo'])
 
   // Restore agents
   store.agents = originalAgents

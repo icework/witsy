@@ -133,28 +133,6 @@
     "retry": "Retry",
     "runAgent": "Run agent",
     "save": "Save",
-    "schedule": {
-      "at": "at",
-      "daily": "Daily",
-      "day_of_every": "day of every",
-      "days_at": "day(s), at",
-      "disabled": "Disabled",
-      "every": "Every",
-      "friday": "Fri",
-      "hourly": "Hourly",
-      "hours_on_minute": "hour(s) on minute",
-      "minutes": "Minutes",
-      "monday": "Mon",
-      "monthly": "Monthly",
-      "months": "month(s)",
-      "on_the": "On the",
-      "saturday": "Sat",
-      "sunday": "Sun",
-      "thursday": "Thu",
-      "tuesday": "Tue",
-      "wednesday": "Wed",
-      "weekly": "Weekly"
-    },
     "search": "Search…",
     "select": "Select",
     "selectAll": "Select All",
@@ -200,230 +178,15 @@
     "yes": "Yes"
   },
   "agent": {
-    "copySuffix": "Copy",
     "create": {
-      "goal": {
-        "title": "Agent Goal"
-      },
-      "information": {
-        "help": {
-          "description": "Short description of your agent purpose. Helps models understand the agent's intent.",
-          "goal": "The individual objective that guides the agent's decision-making.",
-          "name": "Give your agent a name. This will help you identify it later.",
-          "type": "The agent's function and relationship to other agents."
-        },
-        "promptInputs": "Detected Variables",
-        "title": "General Information",
-        "type": "Role"
-      },
-      "invocation": {
-        "missingInput": "[{name} is missing]",
-        "missingInputs": {
-          "cancelButtonText": "Save anyway",
-          "confirmButtonText": "Fix variables",
-          "text": "Behavior of your agent when triggered by the scheduler is undefined. You should either define values for all variables or remove them from the prompt.",
-          "title": "Some of your prompt variables are not defined"
-        },
-        "title": "Agent Triggers",
-        "variables": "Prompt variables values for scheduled invocations"
-      },
-      "llm": {
-        "help": {
-          "warning": "Agent execution is highly dependent on the capabilities of each model. Make sure you select a model that supports agentic capabilities."
-        },
-        "showModelSettings": "Advanced Settings",
-        "title": "Model Configuration"
-      },
-      "settings": {
-        "title": "Advanced Model Settings"
-      },
       "workflow": {
-        "addStep": "Add Step",
-        "confirmDeleteStep": "Are you sure you want to delete this step?",
-        "createUserVariable": "Create custom variable",
-        "createVariable": {
-          "defaultPlaceholder": "Optional default value",
-          "defaultValue": "Default Value",
-          "defaultValueHelper": "Provide a default value",
-          "descPlaceholder": "Optional description",
-          "description": "Description",
-          "descriptionHelper": "The description will guide the user when prompted for a value",
-          "error": {
-            "nameDuplicate": "A variable named \"{name}\" already exists in this prompt.",
-            "nameRequired": "Variable name is required.",
-            "nameSystem": "The name \"{name}\" is reserved for system variables."
-          },
-          "name": "Variable Name",
-          "nameHelper": "Set a clear, descriptive name",
-          "namePlaceholder": "e.g. customerName, projectTitle"
-        },
-        "customAgents": "Co-Agents",
-        "customTools": "Tools",
-        "description": "@:{'common.description'}",
-        "docRepo": "Knowledge",
-        "docReposCount": "{count} Knowledge Bases",
-        "error": {
-          "emptyStepPrompt": "Step #{step} prompt cannot be empty.",
-          "missingDocRepo": "Step #{step} uses a Knowledge Base but no {'{'}{'{'}facts{'}'}{'}'} variable is defined in the prompt. Please add a variable of the form {'{'}{'{'}facts{'}'}{'}'} to your prompt.",
-          "structuredOutput": "Error while parsing structured output schema."
-        },
-        "expert": "Expert",
-        "help": {
-          "connect": "Connect previous steps output using {'{'}{'{'}output.#{'}'}{'}'} variables (e.g. {'{'}{'{'}output.1{'}'}{'}'} for step 1 output)",
-          "description": "The description will be used to provide progress updates during agent execution",
-          "docRepo": "Facts extracted from the collection will be appended to your prompt.",
-          "factsVarDesc": "Facts extracted from the collection",
-          "outputVarDesc": "Output of step #{step}",
-          "prompt": "Describe what you want the agent to do in this step of your workflow",
-          "title": "Design your multi-step workflow. Prompt templates will be used to execute each step. You can include \"variables\" that will be substituted with the values provided by the user when the agent is executed. Use the format {'{'}{'{'}name:description:value{'}'}{'}'} to define a variable (the description will guide the user when prompted for a value). Both the description and the default value are optional."
-        },
-        "insertSystemVariable": "Insert system variable",
-        "jsonSchema": "JSON…",
-        "step": "Step {step}",
-        "structuredOutput": {
-          "text": "Specify a <a href=\"https://github.com/Kochava-Studios/witsy/wiki/Agents-JSON-format\" target=\"_blank\">simple JSON schema</a> to define the expected output format of this step.",
-          "title": "JSON Schema"
-        },
-        "systemVar": {
-          "previousStep": "Previous Steps Output"
-        },
-        "title": "Workflow"
+        "docReposCount": "{count} Knowledge Bases"
       }
     },
-    "description": "@:{'common.description'}",
-    "forge": {
-      "a2a": {
-        "import": {
-          "error": {
-            "text": "Check the URL and ensure the A2A server is up and running.",
-            "title": "Error while importing A2A"
-          },
-          "text": "EXPERIMENTAL FEATURE!",
-          "title": "Enter URL of A2A"
-        },
-        "title": "Import A2A Agent"
-      },
-      "confirmDelete": "Are you sure you want to delete this agent?",
-      "create": "New Agent",
-      "empty": {
-        "text": "Agent Forge lets you create custom AI agents to automate your workflows and handle complex tasks. Think of it as having a smart assistant that can break down big jobs into manageable steps and execute them autonomously.",
-        "title": "Welcome to the Agent Forge"
-      },
-      "import": {
-        "conflict": {
-          "createNew": "Create New",
-          "overwrite": "Overwrite",
-          "text": "An agent with this ID already exists. What would you like to do?",
-          "title": "Agent Already Exists"
-        },
-        "error": {
-          "text": "The selected file is not a valid agent JSON file.",
-          "title": "Import Error"
-        },
-        "toolNotFound": "Step {step}: tool {tool} not found",
-        "warning": {
-          "text": "Some tools could not be found. Please ensure the required MCP servers are installed and review the agent configuration:",
-          "title": "Tools Not Found"
-        }
-      },
-      "list": {
-        "empty": "No agent of this type created yet.",
-        "runnable": "User Initiated",
-        "support": "Utility"
-      },
-      "run": "Run",
-      "title": "Agent Forge",
-      "view": "View",
-      "viewCards": "Card view",
-      "viewTable": "Table view"
-    },
-    "goal": "Goal",
-    "help": {
-      "clearHistory": "Clear all history for this agent",
-      "delete": "Delete this agent",
-      "deleteRun": "Delete this run",
-      "duplicate": "Duplicate this agent",
-      "edit": "Edit this agent",
-      "export": "Export agent",
-      "import": "Import agent",
-      "run": "Run this agent",
-      "startedJustNow": "Started just now",
-      "startedSecondsAgo": "Started {seconds}s ago",
-      "stop": "Stop running agent",
-      "stopExecution": "Stop instance {index}",
-      "stopExecutionTime": "Started {time}",
-      "stopThisRun": "Stop this execution",
-      "view": "View agent details"
-    },
-    "history": {
-      "confirmClear": "Are you sure you want to clear the history of this agent?",
-      "confirmDeleteMultiple": "Are you sure you want to delete these runs?",
-      "confirmDeleteSingle": "Are you sure you want to delete this run?",
-      "empty": "No history yet…",
-      "lastRun": "Last Run",
-      "neverRun": "Never",
-      "running": "Running…"
-    },
-    "info": {
-      "failed": "failed",
-      "nextRun": "Next Run",
-      "successful": "successful",
-      "successRate": "Success Rate",
-      "totalRuns": "Total Runs"
-    },
-    "name": "@:{'common.name'}",
     "picker": {
-      "noAgentsText": "Do you want to create one now?",
       "noAgentsTitle": "You haven't created any executable agents yet",
       "title": "Select agent to run"
-    },
-    "run": {
-      "createdAt": "Start time",
-      "details": "Details",
-      "duration": "Duration",
-      "error": "@:{'common.error'}",
-      "output": "Output",
-      "outputItem": "Step {index}",
-      "selectRun": "Select a run to view details",
-      "stepRunning": "Step in progress…",
-      "trigger": "Trigger",
-      "updatedAt": "Completion time"
-    },
-    "status": {
-      "canceled": "Canceled",
-      "cancelled": "Cancelled",
-      "error": "Error",
-      "running": "Running",
-      "success": "Success"
-    },
-    "step": {
-      "toolCalls": "Tool Calls"
-    },
-    "trigger": {
-      "manual": "Manual",
-      "manual_description": "Agents can always be manually triggered",
-      "nextRuns": "Next Runs",
-      "schedule": "Schedule",
-      "webhook": "Webhook",
-      "webhook_copy": "Copy URL",
-      "webhook_description": "Trigger this agent via HTTP request",
-      "webhook_regenerate": "Regenerate token",
-      "webhook_url": "Webhook URL",
-      "workflow": "Workflow"
-    },
-    "type": {
-      "runnable": "User Initiated",
-      "support": "Utility"
-    },
-    "view": {
-      "filter": {
-        "all": "All runs",
-        "exclude_workflow": "Exclude workflows"
-      }
     }
-  },
-  "agentSelector": {
-    "title": "Select delegate agents"
   },
   "automation": {
     "commander": {
@@ -489,7 +252,6 @@
     },
     "editPlaceholder": "Edit message...",
     "empty": {
-      "agentForge": "Create agents to automate your tasks and streamline your workflows!",
       "docRepo": "Index your documents and ground @:{'common.appName'} into your knowledge!",
       "greeting": "Hey, how can I assist you?",
       "mcpServers": "Connect MCP servers to allow @:{'common.appName'} to interact with your environment!"
@@ -1297,7 +1059,6 @@
       "title": "Edit"
     },
     "file": {
-      "agentForge": "@:{'agent.forge.title'}",
       "backupExport": "Backup data and settings…",
       "backupImport": "Restore backup…",
       "closeWindow": "Close Window",

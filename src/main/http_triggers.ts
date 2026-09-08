@@ -70,17 +70,6 @@ export function installHttpTriggers(httpServer: HttpServer, app: App): void {
     }
   })
 
-  httpServer.register('/api/forge', async (req, res, parsedUrl) => {
-    if (!isHttpEndpointsEnabled(app, res)) return
-    try {
-      await parseParams(req, parsedUrl)
-      window.openAgentForgeWindow()
-      sendJson(res, { success: true, action: 'forge' })
-    } catch (error) {
-      sendError(res, error instanceof Error ? error.message : 'Internal server error', 500)
-    }
-  })
-
   httpServer.register('/api/realtime', async (req, res, parsedUrl) => {
     if (!isHttpEndpointsEnabled(app, res)) return
     try {

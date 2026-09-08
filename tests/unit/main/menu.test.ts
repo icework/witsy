@@ -32,7 +32,6 @@ test('installMenu', () => {
     scratchpad: vi.fn(),
     settings: vi.fn(),
     studio: vi.fn(),
-    forge: vi.fn(),
     backupExport: vi.fn(),
     backupImport: vi.fn(),
     importOpenAI: vi.fn(),

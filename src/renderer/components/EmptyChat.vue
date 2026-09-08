@@ -37,12 +37,6 @@
 
       <div class="shortcuts-list" v-else>
           <HomeShortcut
-            key="agentForge"
-            :name="t('agent.forge.title')"
-            :description="t('chat.empty.agentForge')"
-            @run="openAgentForge"
-          />
-          <HomeShortcut
             key="mcpServer"
             :icon="PlugIcon"
             :name="t('mcp.mcpServers')"
@@ -127,10 +121,6 @@ const load = () => {
     }
   })).slice(0, showAllShortcuts.value ? undefined : 3);
 
-}
-
-const openAgentForge = () => {
-  useEventBus().emitBusEvent('set-main-window-mode', 'agents')
 }
 
 const openMcpServers = () => {

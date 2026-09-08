@@ -23,7 +23,6 @@ export interface ShortcutCallbacks {
   scratchpad: ShortcutCallback
   realtime: ShortcutCallback
   studio: ShortcutCallback
-  forge: ShortcutCallback
 }
 
 // Native shortcut callbacks (with down/up)
@@ -37,7 +36,6 @@ export interface NativeShortcutCallbacks {
   scratchpad: NativeShortcutCallback
   realtime: NativeShortcutCallback
   studio: NativeShortcutCallback
-  forge: NativeShortcutCallback
 }
 
 export type Application = {

@@ -18,7 +18,6 @@
       <RealtimeChat v-if="mode === 'voice-mode'" ref="realtime" />
       <AudioBooth v-if="mode === 'booth'" ref="audioBooth" />
     
-      <AgentForge v-if="mode === 'agents'" />
       <McpServers v-if="mode === 'mcp'" />
       <DocRepos v-if="mode === 'docrepos'" :extra="viewParams" />
 
@@ -68,7 +67,6 @@ import useEventBus from '@composables/event_bus'
 import useIpcListener from '@composables/ipc_listener'
 import useWebappManager from '@composables/webapp_manager'
 import Dialog from '@renderer/utils/dialog'
-import AgentForge from '@screens/AgentForge.vue'
 import AudioBooth from '@screens/AudioBooth.vue'
 import Chat from '@screens/Chat.vue'
 import ContextWorkflows from '@screens/ContextWorkflows.vue'
@@ -191,7 +189,11 @@ onBeforeUnmount(() => {
 
 const onMode = (next: MenuBarMode) => {
 
-  //console.log('[main] onMode', next)
+  // Old links and unknown views should always land on a usable screen.
+  const supportedModes: MenuBarMode[] = ['none', 'chat', 'context-workflows', 'studio', 'scratchpad', 'booth', 'voice-mode', 'docrepos', 'mcp', 'settings', 'computer-use', 'debug']
+  if (!supportedModes.includes(next) && !(typeof next === 'string' && next.startsWith('webapp-'))) {
+    next = 'chat'
+  }
 
   // hide settings when leaving settings mode
   if (mode.value === 'settings' && next !== 'settings') {

@@ -99,7 +99,6 @@ export const EXPERTS = {
 } as const;
 
 export const AGENTS = {
-  OPEN_FORGE: 'agents-open-forge',
   LIST: 'agents-list',
   LOAD: 'agents-load',
   SAVE: 'agents-save',
