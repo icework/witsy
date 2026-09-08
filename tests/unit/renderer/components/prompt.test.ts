@@ -1642,8 +1642,9 @@ test('defaultPrompt returns correct placeholder for auto mode after send', async
   const wrapperAuto = mount(Prompt, { ...stubTeleport, props: { chat: chat, conversationMode: 'auto', enableTools: false } })
 
   // Set a prompt
-  const promptInput = wrapperAuto.find<HTMLInputElement>('.input textarea')
-  await promptInput.setValue('test message')
+  // Voice supplies text through the public API because its textarea is disabled.
+  wrapperAuto.vm.setPrompt('test message')
+  await wrapperAuto.vm.$nextTick()
 
   // Send prompt
   wrapperAuto.vm.sendPrompt()
@@ -1659,8 +1660,8 @@ test('defaultPrompt returns correct placeholder for ptt mode after send', async 
   const wrapperPtt = mount(Prompt, { ...stubTeleport, props: { chat: chat, conversationMode: 'ptt', enableTools: false } })
 
   // Set a prompt
-  const promptInput = wrapperPtt.find<HTMLInputElement>('.input textarea')
-  await promptInput.setValue('test message')
+  wrapperPtt.vm.setPrompt('test message')
+  await wrapperPtt.vm.$nextTick()
 
   // Send prompt
   wrapperPtt.vm.sendPrompt()
@@ -1842,4 +1843,17 @@ test('Plus menu omits Writing Style and sending preserves agent instructions', a
   await wrapper.find('.input textarea').setValue('Hello')
   await wrapper.find('.send-stop').trigger('click')
   expect(wrapper.emitted('prompt')?.[0]?.[0]).toEqual(expect.objectContaining({ instructions: 'Agent instructions' }))
+})
+
+
+test('empty or whitespace-only composer cannot send, but a draft can', async () => {
+  const send = wrapper.find('button.send-stop')
+  expect(send.attributes('disabled')).toBeDefined()
+  await wrapper.find('textarea').setValue('   ')
+  await send.trigger('click')
+  expect(wrapper.emitted('prompt')).toBeUndefined()
+  await wrapper.find('textarea').setValue('A useful question')
+  expect(send.attributes('disabled')).toBeUndefined()
+  await send.trigger('click')
+  expect(wrapper.emitted('prompt')?.[0]?.[0]).toMatchObject({ prompt: 'A useful question' })
 })

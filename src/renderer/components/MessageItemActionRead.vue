@@ -1,9 +1,9 @@
 <template>
-  <div class="action read" v-if="message.role == 'assistant' && message.type == 'text' && !message.transient" @click="onToggleRead(message)">
+  <button type="button" class="action read" v-if="message.role == 'assistant' && message.type == 'text' && !message.transient" @click="onToggleRead(message)">
     <template v-if="mgsAudioState(message) == 'playing'"><SquareIcon/> {{ t('common.stop') }}</template>
     <template v-else-if="mgsAudioState(message) == 'loading'"><XIcon/> {{ t('common.cancel') }}</template>
     <template v-else><PlayIcon /> {{ t('common.read') }}</template>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">

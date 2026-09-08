@@ -16,6 +16,7 @@ import { fullExpertI18n, getLlmLocale, setLlmLocale } from './i18n'
 import LlmUtils from './llm_utils'
 import LlmFactory, { ILlmManager } from './llms/llm'
 import { availablePlugins } from './plugins/plugins'
+import { summarizeChatTitle } from './chat_title'
 
 export interface AssistantCompletionOpts extends GenerationOpts {
   engine?: string
@@ -255,7 +256,7 @@ export default class {
     // check if we need to update title
     if (opts.titling && !this.chat.hasTitle()) {
       generationCallback?.('before_title')
-      this.chat.title = await this.getTitle() || this.chat.title
+      await summarizeChatTitle(this.chat, this.config)
     }
 
     // restore llm locale
@@ -288,11 +289,6 @@ export default class {
     // now attach
     this.chat.lastMessage().attach(file)
 
-  }
-
-  private async getTitle(): Promise<string> {
-    const llmUtils = new LlmUtils(this.config)
-    return await llmUtils.getTitle(this.chat.engine, this.chat.model, this.chat.messages)
   }
 
 }

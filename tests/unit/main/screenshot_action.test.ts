@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 const state = vi.hoisted(() => ({ home: '', registered: new Set<string>() }))
-const win = vi.hoisted(() => ({ isDestroyed: () => false, isVisible: () => true, hide: vi.fn(), show: vi.fn(), getBounds: () => ({ x: 0, y: 0, width: 1400, height: 1000 }), setMinimumSize: vi.fn(), setBounds: vi.fn(), setAlwaysOnTop: vi.fn() }))
+const win = vi.hoisted(() => ({ isDestroyed: () => false, isVisible: () => true, hide: vi.fn(), show: vi.fn(), getBounds: () => ({ x: 0, y: 0, width: 1400, height: 1000 }), setMinimumSize: vi.fn(), setBounds: vi.fn(), setAlwaysOnTop: vi.fn(), setWindowButtonVisibility: vi.fn() }))
 const capture = vi.hoisted(() => ({ webContents: { id: 9 }, destroy: vi.fn(), show: vi.fn(), setAlwaysOnTop: vi.fn(), once: vi.fn() }))
 const image = vi.hoisted(() => ({ isEmpty: () => false, getSize: () => ({ width: 200, height: 100 }), toDataURL: () => 'data:image/png;base64,aGVsbG8=', crop: vi.fn() }))
 vi.mock('@main/window', () => ({ mainWindow: win, createWindow: vi.fn(() => capture), emitIpcEvent: vi.fn(), openMainWindow: vi.fn() }))
@@ -139,10 +139,11 @@ test.each(['chat', 'task'] as const)('a %s workflow with no context prepares ins
 
 test('background launcher restores regular chat sizing after submission and original bounds on expand', () => {
   openPromptWorkflow({ schemaVersion: 1, id: 'launcher', name: 'Task', contextInput: 'none', mode: 'task', prompt: 'Summarize', accelerator: '', enabled: true })
-  expect(win.setMinimumSize).toHaveBeenLastCalledWith(480, 280)
-  expect(win.setBounds).toHaveBeenLastCalledWith(expect.objectContaining({ width: 680, height: 340 }))
+  expect(win.setMinimumSize).toHaveBeenLastCalledWith(480, 220)
+  expect(win.setBounds).toHaveBeenLastCalledWith(expect.objectContaining({ width: 640, height: 260 }))
   updateScreenshot({ chatId: 'running', busy: true })
   expect(win.setMinimumSize).toHaveBeenLastCalledWith(800, 600)
+  if (process.platform === 'darwin') expect(win.setWindowButtonVisibility).toHaveBeenLastCalledWith(true)
   updateScreenshot({ expand: true })
   expect(win.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1400, height: 1000 })
 })

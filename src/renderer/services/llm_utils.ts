@@ -8,6 +8,7 @@ import { DocRepoQueryResponseItem } from 'types/rag'
 import { z } from 'zod'
 import { getLlmLocale, i18nInstructions, localeToLangName, t } from './i18n'
 import LlmFactory from './llms/llm'
+import { nativeCatalog } from './native_models'
 
 export interface InstructionsModifiers {
   noMarkdown?: boolean
@@ -163,25 +164,43 @@ export default class LlmUtils {
     return llmManager.getChatEngineModel(false)
   }
 
-  async getTitle(engine: string, fallbackModel: string, thread: Message[]): Promise<string|null> {
+  async getTitle(thread: Message[]): Promise<string|null> {
 
     try {
 
-      // Get optimal model for simple task (titling is simple)
-      const { engine: selectedEngine, model: titlingModel } = this.getEngineModelForTask('simple', engine, fallbackModel)
+      // Use the configured default chat model without changing workspace defaults.
+      const llmManager = LlmFactory.manager(this.config)
+      const defaults = nativeCatalog(this.config, llmManager).defaults
+      if (!defaults) return null
+
+      const model = llmManager.getChatModel(defaults.provider, defaults.model)
+      if (!model) return null
+
+      // Copy only the opening exchange; attachments, tools and message-specific
+      // instructions must not be forwarded to the model generating the title.
+      const textForTitle = (message: Message): string => {
+        if (message.uiOnly || message.type === 'image') return ''
+        return (message.content || '').replace(/<tool\b[^>]*>[\s\S]*?<\/tool>/gi, '').trim()
+      }
+      const userIndex = thread.findIndex(message => message.role === 'user' && !message.uiOnly)
+      if (userIndex === -1) return null
+      const userText = textForTitle(thread[userIndex])
+      const assistant = thread.slice(userIndex + 1).find(message => message.role === 'assistant' && textForTitle(message))
+      if (!userText && !assistant) return null
+
+      const excerpt = (content: string) => Array.from(content).slice(0, 4000).join('')
 
       // build messages
       const messages = [
         new Message('system', i18nInstructions(this.config, 'instructions.utils.titling')),
-        thread[1],
-        thread[2],
+        new Message('user', excerpt(userText)),
+        ...(assistant ? [new Message('assistant', excerpt(textForTitle(assistant)))] : []),
         new Message('user', i18nInstructions(this.config, 'instructions.utils.titlingUser'))
       ]
 
       // get the title
-      const llmManager = LlmFactory.manager(this.config)
-      const llm = llmManager.igniteEngine(selectedEngine)
-      const model = llmManager.getChatModel(selectedEngine, titlingModel)
+      const llm = llmManager.igniteEngine(defaults.provider)
+      if (!llm) return null
       let title = await LlmUtils.complete(llm, model, messages, {
         tools: false,
         toolCallsInThread: false,
@@ -189,31 +208,21 @@ export default class LlmUtils {
         thinkingBudget: 0,
         reasoning: false,
       })
-      if (title === '') {
-        return thread[1].content
-      }
-
-      // ollama reasoning removal: everything between <think> and </think>
-      title = title.replace(/<think>[\s\S]*?<\/think>/g, '')
+      // Some models include reasoning despite the disabled reasoning options.
+      title = title.replace(/<think\b[^>]*>[\s\S]*?(?:<\/think>|$)/gi, '')
 
       // remove html tags
       title = title.replace(/<[^>]*>/g, '')
 
       // and markdown
-      title = removeMarkdown(title)
+      title = removeMarkdown(title).replace(/\s+/g, ' ').trim()
 
-      // remove prefixes
-      if (title.startsWith('Title:')) {
-        title = title.substring(6).trim()
-      }
-
-      // remove quotes
-      if (title.startsWith('"') && title.endsWith('"')) {
-        title = title.substring(1, title.length - 1)
-      }
+      // Strip wrappers before and after a possible title prefix.
+      const unquote = (text: string) => text.replace(/^["'“‘「『]+|["'”’」』]+$/g, '').trim()
+      title = unquote(unquote(title).replace(/^(?:title|标题)\s*[:：]\s*/i, '').trim())
 
       // done
-      return title
+      return Array.from(title).slice(0, 60).join('').trim() || null
 
     } catch (error) {
       console.error('Error while trying to get title', error)

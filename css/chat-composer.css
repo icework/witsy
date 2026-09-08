@@ -1,0 +1,72 @@
+/* Shared by Native and external Runtime chat. Tokens: variables.css. */
+.chat-composer {
+  container: chat-composer / inline-size;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  padding: var(--space-10);
+  border: var(--space-px) solid var(--color-outline-variant);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface-lowest);
+  box-shadow: var(--shadow-card);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.chat-composer:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-outline-variant));
+  box-shadow: var(--shadow-card);
+}
+.chat-composer .composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+.composer-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: calc(var(--space-32) * 3);
+  min-height: var(--space-16);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--dimmed-text-color);
+  background: transparent;
+}
+.composer-choice:hover { background: var(--color-surface-low); }
+.composer-choice:focus-within { outline: var(--space-1) solid var(--color-focus); outline-offset: var(--space-1); }
+.composer-choice.model-control { max-width: calc(var(--space-32) * 4); }
+.composer-choice svg { width: var(--icon-md); height: var(--icon-md); flex-shrink: 0; color: var(--faded-text-color); }
+.composer-choice .chevron { width: var(--space-6); height: var(--space-6); pointer-events: none; }
+.composer-choice select {
+  appearance: none;
+  field-sizing: content;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 !important;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--font-size-13);
+  line-height: var(--line-height-20);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}
+.composer-choice select:disabled { cursor: default; color: var(--faded-text-color); }
+.composer-choice:has(select:disabled) { background: transparent; }
+@container chat-composer (max-width: 540px) {
+  .composer-choice > svg:first-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-composer { transition: none; }
+}

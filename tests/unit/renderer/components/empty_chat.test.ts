@@ -20,6 +20,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  store.loadAgents()
+  const template = store.agents[0]
+  store.agents = Array.from({ length: 5 }, (_, index) => ({ ...template, uuid: `agent-${index}`, name: `Agent ${index}`, createdAt: index }))
 })
 
 test('Renders empty chat component', async () => {
@@ -67,7 +70,7 @@ test('Shows "show more" button initially', async () => {
   const wrapper: VueWrapper<any> = mount(EmptyChat)
   await wrapper.vm.$nextTick()
 
-  const showMoreBtn = wrapper.find('.shortcuts-header .icon')
+  const showMoreBtn = wrapper.find('.shortcuts-header .expand-shortcuts')
   expect(showMoreBtn.exists()).toBe(true)
   expect(showMoreBtn.text()).toContain('common.showMore')
 })
@@ -82,16 +85,17 @@ test('Expands shortcuts when clicking show more', async () => {
   expect(initialCount).toBeLessThanOrEqual(3)
 
   // Click show more
-  const showMoreBtn = wrapper.find('.shortcuts-header .icon')
+  const showMoreBtn = wrapper.find('.shortcuts-header .expand-shortcuts')
   await showMoreBtn.trigger('click')
   await nextTick()
 
   // Should show all shortcuts now
   shortcuts = wrapper.findAllComponents({ name: 'HomeShortcut' })
-  expect(shortcuts.length).toBeGreaterThanOrEqual(initialCount)
+  expect(initialCount).toBe(3)
+  expect(shortcuts.length).toBe(5)
 
   // Button should now say "show less"
-  const showLessBtn = wrapper.find('.shortcuts-header .icon')
+  const showLessBtn = wrapper.find('.shortcuts-header .expand-shortcuts')
   expect(showLessBtn.text()).toContain('common.showLess')
 })
 
@@ -100,7 +104,7 @@ test('Collapses shortcuts when clicking show less', async () => {
   await wrapper.vm.$nextTick()
 
   // Expand first
-  const showMoreBtn = wrapper.find('.shortcuts-header .icon')
+  const showMoreBtn = wrapper.find('.shortcuts-header .expand-shortcuts')
   await showMoreBtn.trigger('click')
   await nextTick()
 
@@ -108,7 +112,7 @@ test('Collapses shortcuts when clicking show less', async () => {
   const expandedCount = shortcuts.length
 
   // Click show less
-  const showLessBtn = wrapper.find('.shortcuts-header .icon')
+  const showLessBtn = wrapper.find('.shortcuts-header .expand-shortcuts')
   await showLessBtn.trigger('click')
   await nextTick()
 

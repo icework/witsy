@@ -1,7 +1,11 @@
 <template>
   <div class="empty">
     
-    <h1>{{ t('chat.empty.greeting') }}</h1>
+    <div class="welcome">
+      <div class="welcome-mark" aria-hidden="true"><MessagesSquareIcon /></div>
+      <h1>{{ t('chat.empty.greeting') }}</h1>
+      <p>{{ t('chat.empty.subtitle') }}</p>
+    </div>
     
     <div class="shortcuts" v-if="!compact">
 
@@ -11,21 +15,16 @@
 
           {{ t('common.agents')}}
 
-          <div class="icon" v-if="!showAllShortcuts" @click="showAllShortcuts = true">
-            {{ t('common.showMore') }}
-            <ChevronDownIcon />
-          </div>
-
-          <div class="icon" v-else @click="showAllShortcuts = false">
-            {{ t('common.showLess') }}
-            <ChevronUpIcon />
-          </div>
+          <button type="button" class="expand-shortcuts" v-if="shortcuts.length > 3" :aria-expanded="showAllShortcuts" @click="showAllShortcuts = !showAllShortcuts">
+            {{ showAllShortcuts ? t('common.showLess') : t('common.showMore') }}
+            <ChevronUpIcon v-if="showAllShortcuts" /><ChevronDownIcon v-else />
+          </button>
 
         </div>
 
         <div class="shortcuts-list">
           <HomeShortcut
-            v-for="shortcut in shortcuts"
+            v-for="shortcut in visibleShortcuts"
             :key="shortcut.name"
             :name="shortcut.name"
             :description="shortcut.description"
@@ -65,9 +64,9 @@ import useEventBus from '@composables/event_bus'
 import useIpcListener from '@composables/ipc_listener'
 import { t } from '@services/i18n'
 import { store } from '@services/store'
-import { ChevronDownIcon, ChevronUpIcon, LightbulbIcon, PlugIcon } from 'lucide-vue-next'
+import { ChevronDownIcon, ChevronUpIcon, LightbulbIcon, MessagesSquareIcon, PlugIcon } from 'lucide-vue-next'
 import { Agent } from 'types/agents'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import HomeShortcut from './HomeShortcut.vue'
 
 const { onIpcEvent } = useIpcListener()
@@ -82,6 +81,7 @@ defineProps<{ compact?: boolean }>()
 
 const shortcuts = ref<Shortcut[]>([])
 const showAllShortcuts = ref(false)
+const visibleShortcuts = computed(() => showAllShortcuts.value ? shortcuts.value : shortcuts.value.slice(0, 3))
 
 const emit = defineEmits(['run-agent'])
 
@@ -101,7 +101,7 @@ const load = () => {
     return runs.length > 0 ? runs[runs.length - 1].createdAt : agent.createdAt
   }
 
-  shortcuts.value = store.agents.sort((a, b) => {
+  shortcuts.value = [...store.agents].sort((a, b) => {
 
     if (!lastRuns[a.uuid]) {
       lastRuns[a.uuid] = getLastRun(a)
@@ -119,7 +119,7 @@ const load = () => {
     run: () => {
       emit('run-agent', a.uuid)
     }
-  })).slice(0, showAllShortcuts.value ? undefined : 3);
+  }));
 
 }
 
@@ -137,81 +137,44 @@ const openDocRepo = () => {
 <style scoped>
 
 .empty {
-  width: min(80%, calc(var(--space-32) * 9));
+  box-sizing: border-box;
+  width: min(calc(100% - var(--space-24)), calc(var(--space-32) * 9));
   min-width: 0;
-  max-width: 100%;
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-12) 0;
   align-self: center;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-20);
-
+  justify-content: safe center;
+  gap: var(--space-16);
   color: var(--text-color);
-
-  h1 {
-    font-size: 24px;
-    font-weight: var(--font-weight-medium);
-  }
-
-  .shortcuts {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-
-    .shortcuts-header {
-
-      width: 100%;
-      display: flex;
-      flex-direction: row;
-
-      font-size: 14px;
-      font-weight: 500;
-
-      .icon {
-
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-        margin-left: auto;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--color-primary);
-        gap: 0.25rem;
-
-        svg {
-          fill: var(--color-primary);
-        }
-      }
-
-
-    }
-
-    .shortcuts-list {
-
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-
-      overflow-y: auto;
-      max-height: 400px;
-
-      &:nth-child(n+3) {
-        display: none;
-      }
-
-    }
-  }
+}
+.welcome { text-align: center; max-width: 100%; }
+.welcome-mark {
+  width: var(--space-24);
+  height: var(--space-24);
+  margin: 0 auto var(--space-8);
+  display: grid;
+  place-items: center;
+  border: var(--space-px) solid var(--color-outline-subtle);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+.welcome-mark svg { width: var(--icon-xl); height: var(--icon-xl); stroke-width: 1.5; }
+h1 { margin: 0; font-size: var(--font-size-28); font-weight: var(--font-weight-semibold); line-height: var(--line-height-36); letter-spacing: var(--letter-spacing-tight-1); text-wrap: balance; }
+.welcome p { margin: var(--space-6) 0 0; color: var(--faded-text-color); font-size: var(--font-size-14); line-height: var(--line-height-24); text-wrap: balance; }
+.shortcuts { width: 100%; min-height: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.shortcuts-header { display: flex; align-items: center; justify-content: space-between; color: var(--faded-text-color); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); }
+.expand-shortcuts { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-4); border: none; background: transparent; color: var(--faded-text-color); font-size: var(--font-size-12); }
+.expand-shortcuts svg { width: var(--icon-md); height: var(--icon-md); }
+.shortcuts-list { display: flex; flex-direction: column; gap: var(--space-4); }
+@container chat-layout (max-width: 520px) {
+  h1 { font-size: var(--font-size-24); line-height: var(--line-height-32); }
+  .empty { gap: var(--space-12); }
 }
 
 </style>

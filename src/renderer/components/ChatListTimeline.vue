@@ -68,10 +68,9 @@ const showContextMenu = (event: MouseEvent, chat: Chat) => {
 <style scoped>
 
 .day {
-  padding: 0.5rem;
+  padding: var(--space-8) var(--space-6) var(--space-4);
   font-size: 12px;
-  font-weight: bold;
-  text-transform: uppercase;
+  font-weight: var(--font-weight-medium);
   color: var(--sidebar-section-title-color);
 }
 

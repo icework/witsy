@@ -55,7 +55,7 @@ test('Empty chat', async () => {
   const wrapper: VueWrapper<any> = mount(ChatArea, { props: { chat: new Chat() } } )
   expect(wrapper.exists()).toBe(true)
   expect(wrapper.find('.sp-main > header').exists()).toBe(true)
-  expect(wrapper.find('.sp-main > header .title').text()).toBe('')
+  expect(wrapper.find('.sp-main > header .title').text()).toBe('chat.empty.title')
   expect(wrapper.find('.sp-main > header .menu').exists()).toBe(false)
   expect(wrapper.find('.sp-main .model-settings').exists()).toBe(true)
   expect(wrapper.find('.sp-main .model-settings').classes()).not.toContain('visible')

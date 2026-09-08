@@ -1,6 +1,6 @@
 <template>
   <div class="runtime-model-picker" :class="{ compact }" :aria-busy="loading">
-    <label class="provider-control" :title="providerTitle">
+    <label class="provider-control" :class="{ 'composer-choice': compact }" :title="providerTitle">
       <GlobeIcon v-if="compact" aria-hidden="true" /><span v-else>{{ t('chatAgent.provider') }}</span>
       <select :aria-label="t('chatAgent.provider')" :value="providerValue" :disabled="disabled || loading || !!error" @change="chooseProvider">
         <option v-if="missingProvider" value="unavailable" disabled>{{ pendingLabel }}</option>
@@ -9,7 +9,7 @@
       </select>
       <ChevronDownIcon v-if="compact" class="chevron" aria-hidden="true" />
     </label>
-    <label class="model-control" :title="modelTitle">
+    <label class="model-control" :class="{ 'composer-choice': compact }" :title="modelTitle">
       <BoxIcon v-if="compact" aria-hidden="true" /><span v-else>{{ t('runtime.model') }}</span>
       <select :aria-label="t('runtime.model')" :value="modelValue" :disabled="disabled || loading || !!error || missingProvider || !models.length" @change="chooseModel">
         <option v-if="missingModel" value="unavailable" disabled>{{ pendingLabel }}</option>
@@ -55,24 +55,10 @@ const chooseModel = (event: Event) => {
 </script>
 <style scoped>
 .runtime-model-picker { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-8); min-width: 0; }
-label { flex: 1 1 calc(var(--space-32) * 2.5); min-width: 0; }
+label:not(.composer-choice) { flex: 1 1 calc(var(--space-32) * 2.5); min-width: 0; }
 .field-help, .catalog-error { flex-basis: 100%; margin: 0; font-size: var(--font-size-12); line-height: 1.5; }
-.catalog-error { color: var(--color-error); }
-.catalog-error button { font: inherit; color: inherit; padding: 0 var(--space-3); }
+.catalog-error { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); color: var(--color-error); }
+.catalog-error button { min-height: var(--space-16); margin: 0; padding: var(--space-2) var(--space-4); border: none; border-radius: var(--radius-md); background: var(--color-error-container); font: inherit; color: var(--color-on-error-container); }
+.catalog-error button:focus-visible { outline: var(--space-1) solid var(--color-focus); outline-offset: var(--space-1); }
 .compact { display: contents; }
-.compact label { display: flex; align-items: center; flex: 0 1 auto; gap: var(--space-3); max-width: calc(var(--space-32) * 3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); color: var(--dimmed-text-color); background: var(--background-color-light); }
-.compact label:hover { background: var(--control-button-active-bg-color); }
-.compact label:focus-within { outline: var(--space-1) solid var(--highlight-color); outline-offset: var(--space-1); }
-.compact .model-control { max-width: calc(var(--space-32) * 4); }
-.compact svg { width: var(--icon-md); height: var(--icon-md); flex-shrink: 0; }
-.compact .chevron { width: var(--space-6); height: var(--space-6); pointer-events: none; opacity: 0.65; }
-.compact select { appearance: none; field-sizing: content; width: auto; min-width: 0; max-width: 100%; padding: 0 !important; margin: 0; border: none; border-radius: 0; background: transparent; color: inherit; font-family: inherit; font-size: var(--font-size-13); line-height: var(--line-height-20); font-weight: var(--font-weight-medium); text-overflow: ellipsis; cursor: pointer; outline: none; box-shadow: none; }
-.compact select:disabled { cursor: default; color: var(--faded-text-color); }
-.compact label:has(select:disabled) .chevron { display: none; }
-@container chat-composer (max-width: 540px) { .compact label > svg:first-child { display: none; } }
-@container chat-composer (max-width: 420px) {
-  .compact label { flex: 1 1 0; }
-  .compact .model-control { flex-grow: 1.4; }
-  .compact select { flex: 1; width: 100%; }
-}
 </style>

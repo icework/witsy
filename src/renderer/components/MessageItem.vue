@@ -56,16 +56,18 @@
       <div class="message-content" v-if="message.type == 'text' && message.content !== null">
         <div v-if="isEditing" class="edit-container form form-large">
           <textarea
+            ref="editInput"
             v-model="editedContent"
             class="edit-textarea"
+            :aria-label="t('chat.editPlaceholder')"
             :placeholder="t('chat.editPlaceholder')"
             @keydown.meta.enter="saveEdit"
             @keydown.ctrl.enter="saveEdit"
             @keydown.escape="cancelEditing"
           ></textarea>
           <div class="edit-actions">
-            <button @click="saveEdit" class="primary">{{ t('chat.send') }}</button>
-            <button @click="cancelEditing" class="tertiary">{{ t('chat.cancel') }}</button>
+            <button type="button" @click="saveEdit" class="primary" :disabled="!editedContent.trim()">{{ t('chat.send') }}</button>
+            <button type="button" @click="cancelEditing" class="tertiary">{{ t('chat.cancel') }}</button>
           </div>
         </div>
         <MessageItemBody v-else :message="message" :tool-calls-display="toolCallsDisplay" @media-loaded="onMediaLoaded" />
@@ -103,7 +105,7 @@ import { t } from '@services/i18n'
 import { store } from '@services/store'
 import { LoaderCircleIcon } from 'lucide-vue-next'
 import { ToolCallsDisplay } from 'types/config'
-import { computed, inject, onBeforeUnmount, onMounted, PropType, ref, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, PropType, ref, watch } from 'vue'
 // import { getMarkdownSelection } from '@services/markdown'
 
 // const llmManager = LlmFactory.manager(store.config)
@@ -142,6 +144,7 @@ const audioState = ref<{state: string, messageId: string|null}>({
 })
 const isEditing = ref(false)
 const editedContent = ref('')
+const editInput = ref<HTMLTextAreaElement>()
 
 // onUpdated is not called for an unknown reason
 // so let's hack it
@@ -293,14 +296,18 @@ const onContextMenu = (event: MouseEvent) => {
   window.api.main.setContextMenuContext(props.message.uuid)
 }
 
-const startEditing = () => {
+const startEditing = async () => {
   isEditing.value = true
   editedContent.value = props.message.content
+  await nextTick()
+  editInput.value?.focus()
 }
 
-const cancelEditing = () => {
+const cancelEditing = async () => {
   isEditing.value = false
   editedContent.value = ''
+  await nextTick()
+  div.value?.querySelector<HTMLButtonElement>('.message-actions .edit')?.focus()
 }
 
 const saveEdit = () => {
@@ -367,7 +374,16 @@ defineExpose({
   min-height: 6lh;
   resize: vertical;
   flex: 0 1 auto;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-15);
+  line-height: var(--line-height-24);
 }
+
+.edit-textarea:focus-visible { outline: var(--space-1) solid var(--color-focus); outline-offset: var(--space-1); }
 
 .edit-actions {
   flex-shrink: 0;

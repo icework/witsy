@@ -4,13 +4,13 @@
   --settings-max-width: 600px;
 
   --settings-font-size: var(--form-large-font-size);
-  --settings-menu-font-size: 16px;
+  --settings-menu-font-size: var(--font-size-13);
 
   --settings-normal-text-color: var(--tabs-header-normal-text-color);
-  --settings-selected-text-color: var(--tabs-header-selected-text-color);
+  --settings-selected-text-color: var(--color-on-primary-container);
 
   --settings-normal-bg-color: transparent;
-  --settings-selected-bg-color: var(--tabs-header-selected-bg-color);
+  --settings-selected-bg-color: var(--color-primary-container);
 
 }
 
@@ -20,16 +20,17 @@
 }
 
 .split-pane.settings .sp-sidebar {
-  flex-basis: 16rem;
+  flex: 0 0 220px;
+  min-height: 0;
 }
 
 .settings .sp-sidebar ul {
   
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: auto;
-  gap: 0.5rem;
+  gap: var(--space-2);
 
   list-style: none;
 
@@ -40,13 +41,16 @@
       display: flex;
       align-items: center;
       cursor: pointer;
-      padding: 0.5rem;
+      padding: var(--space-4);
+      min-height: var(--space-16);
+      box-sizing: border-box;
+      border-radius: var(--radius-lg);
       background-color: var(--settings-normal-bg-color);
       color: var(--settings-normal-text-color);
           
       .icon {
-        width: 15pt;
-        height: 15pt;
+        width: var(--icon-md);
+        height: var(--icon-md);
         color: var(--settings-normal-text-color) !important;
       }
       
@@ -129,7 +133,7 @@
   main {
     
     max-width: var(--settings-max-width);
-    padding: 1rem 4rem;
+    padding: var(--space-8) var(--space-16);
 
     &.sliding-pane {
       &.editor {
@@ -185,4 +189,13 @@
 .settings .actions .right {
   flex: 1;
   text-align: right;
+}
+
+.settings .sp-sidebar main { min-height: 0; padding-inline: var(--space-4); }
+.settings .sp-sidebar ul li label:hover { background: var(--color-surface-low); }
+.settings .sp-sidebar ul li > [name="tabs"]:focus-visible + label { outline: var(--space-1) solid var(--color-focus); outline-offset: calc(-1 * var(--space-1)); }
+.settings .tab-content main { min-width: 0; }
+@media (max-width: 860px) {
+  .split-pane.settings .sp-sidebar { flex-basis: 184px; }
+  .settings .tab-content main { padding-inline: var(--space-12); }
 }

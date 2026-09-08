@@ -5,11 +5,11 @@
 }
 
 .messages.openai .message .message-role {
-  font-weight: bold;
+  font-weight: var(--font-weight-semibold);
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-6);
 }
 
 .messages.openai .message .message-role .avatar {

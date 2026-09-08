@@ -53,6 +53,19 @@ test('Build from JSON', () => {
   expect(chat.messages.length).toBe(1)
 })
 
+test.each(['generated', 'manual', undefined] as const)('title source survives saving, forking and history sync (%s)', titleSource => {
+  const chat = new Chat('A title')
+  chat.titleSource = titleSource
+  chat.addMessage(new Message('user', 'Question'))
+  const saved = JSON.parse(JSON.stringify(chat))
+  const restored = Chat.fromJson(saved)
+  expect(restored.titleSource).toBe(titleSource)
+  expect(restored.fork(restored.messages[0]).titleSource).toBe(titleSource)
+  const other = new Chat('A title')
+  other.patchFromJson(saved)
+  expect(other.titleSource).toBe(titleSource)
+})
+
 test('Patch from JSON', () => {
   const chat = new Chat('title')
   const patched = chat.patchFromJson({

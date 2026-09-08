@@ -25,8 +25,9 @@
             </section>
             <section class="form-section">
             <h3>{{ t('agentDesign.activation') }}</h3>
-            <label>{{ t('chatAgent.accelerator') }}<input v-model="draft.accelerator" placeholder="Command+Shift+2" /></label>
-            <p>{{ t('contextWorkflow.shortcutHelp') }}</p>
+            <label id="workflow-shortcut-label">{{ t('chatAgent.accelerator') }}</label>
+            <InputAccelerator :key="draft.id" v-model="draft.accelerator" :label="t('chatAgent.accelerator')" help-id="workflow-shortcut-help" :disabled="working" />
+            <p id="workflow-shortcut-help">{{ t('contextWorkflow.shortcutHelp') }}</p>
             <label class="enabled"><input type="checkbox" v-model="draft.enabled" />{{ t('contextWorkflow.enabled') }}</label>
             <p>{{ t('contextWorkflow.previewHelp') }}</p>
             </section>
@@ -46,6 +47,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
+import InputAccelerator from '@components/InputAccelerator.vue'
 import { PlusIcon, WorkflowIcon } from 'lucide-vue-next'
 import { t } from '@services/i18n'
 import useEventBus from '@composables/event_bus'

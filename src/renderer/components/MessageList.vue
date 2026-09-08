@@ -5,9 +5,9 @@
         <MessageItem v-if="message.role != 'system'" :chat="chat" :message="message" class="message" @media-loaded="onMediaLoaded" ref="items" />
       </div>
     </div>
-    <div v-if="overflown" class="overflow" @click="scrollDown">
+    <button type="button" v-if="overflown" class="overflow" :aria-label="t('chat.jumpToLatest')" @click="scrollDown">
       <ArrowDownIcon />
-    </div>
+    </button>
   </div>
 </template>
 
@@ -41,9 +41,8 @@ const overflown = ref(false)
 const itemRefs = useTemplateRef<typeof MessageItem>('items')
 
 const fontStyle = computed(() => {
-  return {
-    '--font-family-base': store.config.appearance.chat.fontFamily,
-  }
+  const fontFamily = store.config.appearance.chat.fontFamily?.trim()
+  return fontFamily ? { '--font-family-base': fontFamily } : {}
 })
 
 const chatTheme = computed(() => props.theme ?? store.config.appearance.chat.theme)
@@ -173,7 +172,9 @@ defineExpose({
 .messages {
   position: relative;
   width: 100%;
-  padding: 16px;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-12);
   overflow-y: auto;
   padding-top: 32px;
   outline: none;
@@ -192,10 +193,17 @@ defineExpose({
   margin-left: -11pt;
   border-radius: 11pt;
   background-color: var(--message-list-overflow-bg-color);
-  border: 1px solid #ccc;
+  border: var(--space-px) solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  color: var(--text-color);
   font-size: 18.5px;
   font-weight: bold;
   cursor: pointer;
 }
+
+
+.messages > div { max-width: calc(var(--space-32) * 12); margin-inline: auto; min-width: 0; }
+.overflow svg { width: var(--icon-md); height: var(--icon-md); }
+.overflow:focus-visible { outline: var(--space-1) solid var(--color-focus); outline-offset: var(--space-2); }
 
 </style>

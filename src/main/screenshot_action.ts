@@ -46,6 +46,7 @@ const restoreMainWindow = () => {
   if (!state.compact || !mainWindow) return
   state.compact = false
   mainWindow.setAlwaysOnTop(false)
+  if (process.platform === 'darwin') mainWindow.setWindowButtonVisibility(true)
   mainWindow.setMinimumSize(800, 600)
   if (originalBounds) mainWindow.setBounds(originalBounds)
   originalBounds = undefined
@@ -58,8 +59,9 @@ const show = () => {
   if (task && !state.compact) {
     originalBounds = mainWindow.getBounds()
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    const width = Math.min(680, area.width), height = Math.min(340, area.height - 40)
-    mainWindow.setMinimumSize(480, 280)
+    const width = Math.min(640, area.width), height = Math.min(260, area.height - 40)
+    mainWindow.setMinimumSize(480, 220)
+    if (process.platform === 'darwin') mainWindow.setWindowButtonVisibility(false)
     mainWindow.setBounds({ x: area.x + Math.max(0, Math.round((area.width - width) / 2)), y: area.y + 40, width, height })
     mainWindow.setAlwaysOnTop(true)
     state.compact = true

@@ -22,12 +22,25 @@ let errorLoadingConfig = false
 let onSettingsChange: CallableFunction = () => {}
 let cachedAppConfig: Configuration = undefined
 
-const safeStore = new Store<Record<string, string>>({
-  name: process.env.DEBUG ? 'apiKeys-debug' : 'apiKeys',
-  accessPropertiesByDotNotation: false,
-  watch: false,
-  encryptionKey: 'witsy',
-});
+const safeStores = new Map<string, Store<Record<string, string>>>()
+const getSafeStore = (app: App): Store<Record<string, string>> => {
+  // Data paths are configured after imports, before the first settings access.
+  const cwd = app.getPath('userData')
+  const name = process.env.DEBUG ? 'apiKeys-debug' : 'apiKeys'
+  const key = path.join(cwd, name)
+  let store = safeStores.get(key)
+  if (!store) {
+    store = new Store<Record<string, string>>({
+      cwd,
+      name,
+      accessPropertiesByDotNotation: false,
+      watch: false,
+      encryptionKey: 'witsy',
+    })
+    safeStores.set(key, store)
+  }
+  return store
+}
 
 const monitor: Monitor = new Monitor(() => {
   cachedAppConfig = undefined
@@ -120,10 +133,10 @@ export const loadSettings = (app: App): Configuration => {
   if (!('general' in jsonConfig) || !('safeKeys' in jsonConfig.general) || jsonConfig.general.safeKeys !== false) {
     let apiKeys = extractApiKeys(jsonConfig)
     if (apiKeys.length > 0) {
-      saveApiKeys(apiKeys)
+      saveApiKeys(app, apiKeys)
       save = true
     } else {
-      apiKeys = loadApiKeys()
+      apiKeys = loadApiKeys(app)
       injectApiKeys(jsonConfig, apiKeys)
     }
   }
@@ -238,12 +251,12 @@ export const saveSettings = (app: App, config: Configuration, always: boolean = 
     if (config.general.safeKeys) {
       const apiKeys = extractApiKeys(clone)
       if (apiKeys.length > 0) {
-        if (saveApiKeys(apiKeys)) {
+        if (saveApiKeys(app, apiKeys)) {
           nullifyApiKeys(clone, apiKeys)
         }
       }
     } else {
-      deleteApiKeys()
+      deleteApiKeys(app)
     }
 
     // save engines configuration separately
@@ -438,7 +451,7 @@ const nullifyDefaults = (settings: anyDict) => {
   }
 }
 
-export const loadApiKeys = (): ApiKeyEntry[] => {
+export const loadApiKeys = (app: App): ApiKeyEntry[] => {
 
   // check
   if (!safeStorage.isEncryptionAvailable()) {
@@ -446,6 +459,7 @@ export const loadApiKeys = (): ApiKeyEntry[] => {
   }
 
   try {
+    const safeStore = getSafeStore(app)
     const credentials = Object.entries(safeStore.store)
     return credentials.reduce((apiKeys, [name, buffer]) => {
       try {
@@ -463,7 +477,7 @@ export const loadApiKeys = (): ApiKeyEntry[] => {
   }
 }
 
-export const deleteApiKeys = (): boolean => {
+export const deleteApiKeys = (app: App): boolean => {
 
   try {
 
@@ -474,7 +488,8 @@ export const deleteApiKeys = (): boolean => {
 
     // First, delete all existing apiKey entries
     try {
-      const credentials = loadApiKeys()
+      const safeStore = getSafeStore(app)
+      const credentials = loadApiKeys(app)
       for (const credential of credentials) {
         safeStore.delete(credential.name)
       }
@@ -494,7 +509,7 @@ export const deleteApiKeys = (): boolean => {
 
 }
 
-export const saveApiKeys = (apiKeys: ApiKeyEntry[]): boolean => {
+export const saveApiKeys = (app: App, apiKeys: ApiKeyEntry[]): boolean => {
 
   try {
 
@@ -504,9 +519,10 @@ export const saveApiKeys = (apiKeys: ApiKeyEntry[]): boolean => {
     }
 
     // First, delete all existing apiKey entries
-    if (!deleteApiKeys()) {
+    if (!deleteApiKeys(app)) {
       return false
     }
+    const safeStore = getSafeStore(app)
     
     // Save new entries
     for (const entry of apiKeys) {

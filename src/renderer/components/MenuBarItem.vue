@@ -2,6 +2,8 @@
   <ButtonIcon ref="item"
     class="item" 
     :class="{ active: active }" 
+    :aria-label="tooltipText || action"
+    :aria-current="active ? 'page' : undefined"
     v-tooltip="{ text: tooltipText, position: 'right' }"
     @click="onClick"
   >
@@ -50,8 +52,12 @@ const onClick = () => {
   aspect-ratio: 1;
   padding: 0.5rem;
   cursor: pointer;
-  color: #848CAF;
+  color: var(--menubar-icon-color);
   position: relative;
+
+  &.active {
+    background: var(--color-primary-container);
+  }
 
   &.active:deep() svg {
     color: var(--menubar-highlight-color) !important;

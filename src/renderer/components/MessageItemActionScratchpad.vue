@@ -1,7 +1,7 @@
 <template>
-  <div class="action scratchpad" v-if="!message.transient && message.role === 'assistant' && message.type === 'text' && !hiddenMessageActions.includes('write')" @click="onScratchpad">
+  <button type="button" class="action scratchpad" v-if="!message.transient && message.role === 'assistant' && message.type === 'text' && !hiddenMessageActions.includes('write')" @click="onScratchpad">
     <FileEditIcon /> {{ t('common.write') }}
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">

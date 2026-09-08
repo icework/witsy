@@ -4,8 +4,11 @@
     <ButtonIcon
       :id="triggerId" 
       class="trigger" 
+      :aria-label="label || t('common.moreActions')"
+      aria-haspopup="menu"
+      :aria-expanded="isMenuOpen"
       @click="toggleMenu"
-      @keydown.enter="toggleMenu"
+      @keydown.enter.prevent="toggleMenu"
       @keydown.space.prevent="toggleMenu"
       tabindex="0"
     >
@@ -30,6 +33,7 @@
 <script setup lang="ts">
 
 import useEventListener from '@composables/event_listener'
+import { t } from '@services/i18n'
 import { MoreVerticalIcon } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import ButtonIcon from './ButtonIcon.vue'
@@ -38,6 +42,7 @@ import ContextMenuPlus, { type MenuPosition } from './ContextMenuPlus.vue'
 const { onDomEvent } = useEventListener()
 
 const props = defineProps({
+  label: String,
   position: {
     type: String as () => MenuPosition,
     default: 'below-right' as MenuPosition

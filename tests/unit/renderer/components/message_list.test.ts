@@ -51,6 +51,16 @@ test('Theme support', async () => {
   expect(wrapper.find('.messages').attributes('class')).toContain('conversation')
 })
 
+test('Restores the system font when a custom chat font is cleared', async () => {
+  store.config.appearance.chat.fontFamily = 'Arial'
+  await wrapper.vm.$nextTick()
+  expect(wrapper.element.style.getPropertyValue('--font-family-base')).toBe('Arial')
+
+  store.config.appearance.chat.fontFamily = ''
+  await wrapper.vm.$nextTick()
+  expect(wrapper.element.style.getPropertyValue('--font-family-base')).toBe('')
+})
+
 //
 // It is normal for the the wrapper not be updated
 // if you add messages to the chat and hope for new messages to appear

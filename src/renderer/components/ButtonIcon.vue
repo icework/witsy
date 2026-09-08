@@ -1,5 +1,5 @@
 <template>
-  <button class="button-icon" @click="onClick">
+  <button type="button" class="button-icon" @click="onClick">
     <slot />
   </button>
 </template>
@@ -17,7 +17,7 @@ function onClick(event: MouseEvent) {
 <style scoped>
 
 .button-icon {
-  flex: 0;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -25,7 +25,7 @@ function onClick(event: MouseEvent) {
   margin: 0;
   border: none;
   background: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: background-color 0.15s ease;
 
@@ -36,11 +36,11 @@ function onClick(event: MouseEvent) {
     height: var(--icon-md);
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--color-surface-low);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     background-color: var(--color-surface-high);
   }
 
@@ -52,6 +52,8 @@ function onClick(event: MouseEvent) {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+
+  &:disabled { cursor: default; }
 }
 
 </style>

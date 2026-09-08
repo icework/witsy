@@ -1,7 +1,7 @@
 <template>
-  <div class="main-window window">
+  <div class="main-window window" :class="{ 'quick-launcher': taskLauncher }">
 
-    <header>
+    <header v-if="!taskLauncher || !isMacOS">
       <div v-if="updateAvailable" class="update-badge" @click="applyUpdate">
         <CloudDownloadIcon :size="14" />
         {{ t('main.update.available') }}
@@ -94,6 +94,7 @@ const realtime = ref<typeof RealtimeChat>(null)
 const settings = ref<typeof Settings>(null)
 const showOnboarding = ref(false)
 const taskLauncher = ref(false)
+const isMacOS = window.api.platform === 'darwin'
 onIpcEvent('screenshot-state', (state) => { taskLauncher.value = state.compact; if (state.compact && mode.value !== 'chat') onMode('chat') })
 const updateAvailable = ref(false)
 
@@ -302,5 +303,24 @@ const onOnboardingDone = () => {
     z-index: -1 !important;
   }
 }
+
+
+.main-window {
+  --window-toolbar-height: 40px;
+  --window-footer-height: 28px;
+  --sidebar-bg-color: var(--color-surface);
+  --sidebar-selected-color: var(--color-surface-high);
+  --sidebar-section-title-color: var(--color-on-surface-variant);
+  --sidebar-text-color: var(--color-on-surface-variant);
+  --menubar-bg-color: var(--color-surface);
+  --control-button-disabled-text-color: var(--color-on-surface-variant);
+  --control-button-disabled-bg-color: var(--color-surface-low);
+  --control-placeholder-text-color: var(--color-on-surface-variant);
+  --dimmed-text-color: var(--color-on-surface-variant);
+}
+.main-window > header { border-bottom-color: var(--color-outline-subtle); background: var(--color-surface); }
+.main-window > main { min-height: 0; max-height: none; }
+.main-window > footer { border-top-color: var(--color-outline-subtle); background: var(--color-surface); font-size: var(--font-size-11); }
+.main-window > footer .actions svg { width: var(--icon-md); height: var(--icon-md); }
 
 </style>

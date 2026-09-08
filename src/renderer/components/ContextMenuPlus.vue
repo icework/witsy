@@ -767,13 +767,14 @@ defineExpose({
 
 .context-menu {
   position: absolute;
-  background: var(--context-menu-bg-color);
-  border: 1px solid var(--context-menu-border-color);
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface-lowest);
+  border: var(--space-px) solid var(--color-outline-variant);
+  box-shadow: var(--shadow-menu);
   max-height: 400px;
   max-width: 270px;
   min-width: 196px;
-  border-radius: var(--radius-lg);
+  box-sizing: border-box;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   z-index: 1070;
   display: flex;
@@ -790,7 +791,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   margin: 0px !important;
-  padding: var(--space-4);
+  padding: var(--space-3);
   scrollbar-color: var(--scrollbar-thumb-color) var(--control-textarea-bg-color);
 }
 
@@ -822,7 +823,7 @@ defineExpose({
   color: var(--context-menu-text-color);
   border: none;
   padding: var(--space-4) 0;
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-13);
   outline: none;
   min-width: 5rem;
   width: auto;
@@ -830,25 +831,27 @@ defineExpose({
 
 .filter-input input::placeholder {
   color: var(--context-menu-text-color);
-  opacity: 0.3;
+  opacity: 1;
 }
 
 .back-label {
   flex: 1;
   color: var(--context-menu-text-color);
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-13);
   opacity: 0.8;
 }
 
 /* Global styles for menu items (to be used by slotted content) */
 :deep(.item) {
   position: relative;
-  padding: 0.5rem;
+  padding: var(--space-3) var(--space-4);
+  min-height: var(--space-16);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-4);
   cursor: pointer;
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-13);
   color: var(--context-menu-text-color);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-20);
@@ -889,25 +892,25 @@ defineExpose({
 
 :deep(.item .icon) {
   flex-shrink: 0;
-  width: var(--icon-lg);
-  height: var(--icon-lg);
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 :deep(.item .icon.text) {
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-13);
 }
 
 :deep(.item.disabled) {
-  color: gray;
+  color: var(--faded-text-color);
   cursor: default;
 }
 
 :deep(.item.selected) {
-  background-color: var(--context-menu-selected-bg-color);
-  color: var(--context-menu-selected-text-color);
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
   border-radius: 0.375rem;
   svg {
-    stroke: var(--context-menu-selected-text-color);
+    stroke: var(--color-on-primary-container);
   }
 }
 

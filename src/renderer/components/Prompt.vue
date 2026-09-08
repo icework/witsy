@@ -1,5 +1,5 @@
 <template>
-  <div class="prompt" :class="{ 'drag-over': isDragOver }" @drop="onDrop" @dragover="onDragOver" @dragenter="onDragEnter" @dragleave="onDragLeave">
+  <div class="prompt chat-composer" :class="{ 'drag-over': isDragOver }" @drop="onDrop" @dragover="onDragOver" @dragenter="onDragEnter" @dragleave="onDragLeave">
     <slot name="before" />
     <ContextScreenshot v-if="contextImage" :image="contextImage" editable :disabled="contextDisabled" @retake="emit('context-retake')" @remove="emit('context-remove')" />
     <div class="attachments" v-if="attachments.length > 0">
@@ -13,12 +13,12 @@
       <div class="textarea-wrapper">
         <div class="icon left processing loader-wrapper" v-if="isProcessing"><Loader /><Loader /><Loader /></div>
         <div v-if="command" class="icon left command" @click="onClickActiveCommand"><CommandIcon /></div>
-        <textarea v-model="prompt" :placeholder="placeholder" @paste="onPaste" @keydown="onKeyDown" @keyup="onKeyUp" ref="input" autofocus="true" :disabled="conversationMode !== 'off'" />
+        <textarea :aria-label="placeholder" v-model="prompt" :placeholder="placeholder" @paste="onPaste" @keydown="onKeyDown" @keyup="onKeyUp" ref="input" autofocus="true" :disabled="conversationMode !== 'off'" />
       </div>
     </div>
-    <div class="actions">
+    <div class="actions composer-actions">
       
-      <ButtonIcon class="prompt-menu" :id="`prompt-menu-${uniqueId}`" @click="onPromptMenu" ref="promptMenuAnchor">
+      <ButtonIcon class="prompt-menu" :aria-label="t('agentDesign.addContext')" aria-haspopup="menu" :aria-expanded="showPromptMenu" :id="`prompt-menu-${uniqueId}`" @click="onPromptMenu" ref="promptMenuAnchor">
         <PlusIcon class="icon" />
       </ButtonIcon>
       
@@ -56,13 +56,13 @@
       
       <slot name="actions" />
       
-      <ButtonIcon :id="`commands-menu-${uniqueId}`" @click="onCommands()" v-if="enableCommands && prompt && store.isFeatureEnabled('chat.commands')">
+      <ButtonIcon :aria-label="t('settings.tabs.commands')" :id="`commands-menu-${uniqueId}`" @click="onCommands()" v-if="enableCommands && prompt && store.isFeatureEnabled('chat.commands')">
         <CommandIcon class="icon command" />
       </ButtonIcon>
       
       <Waveform v-if="enableWaveform && dictating" :width="64" :height="16" foreground-color-inactive="var(--background-color)" foreground-color-active="red" :audio-recorder="audioRecorder" :is-recording="true"/>
       
-      <ButtonIcon :id="`dictate-${uniqueId}`" @click="onDictate" @contextmenu="onConversationMenu" v-if="hasDictation">
+      <ButtonIcon :aria-label="t('prompt.conversation.tooltip')" :id="`dictate-${uniqueId}`" @click="onDictate" @contextmenu="onConversationMenu" v-if="hasDictation">
         <MicIcon
           v-tooltip="{ text: t('prompt.conversation.tooltip'), position: 'top' }"
           :class="{ icon: true, dictate: true, active: dictating }"
@@ -75,7 +75,7 @@
         <ChevronDownIcon class="icon caret" />
       </div>
 
-      <ButtonIcon class="send-stop" @click="(promptingState !== 'idle' || isGenerating) ? onStopPrompting() : onSendPrompt()">
+      <ButtonIcon class="send-stop" :aria-label="(promptingState !== 'idle' || isGenerating) ? t('common.stop') : t('chat.send')" :disabled="promptingState === 'canceling' || (promptingState === 'idle' && !isGenerating && !prompt.trim() && !command)" @click="(promptingState !== 'idle' || isGenerating) ? onStopPrompting() : onSendPrompt()">
         <XIcon class="icon stop" :class="{ canceling: promptingState === 'canceling' }" v-if="promptingState !== 'idle' || isGenerating" />
         <ArrowUpIcon class="icon send" :class="{ disabled: !prompt.length }" v-else />
       </ButtonIcon>
@@ -561,7 +561,7 @@ const setExpert = (xpert: Expert) => {
 const onSendPrompt = () => {
 
   // do not send if already prompting
-  if (promptingState.value !== 'idle') {
+  if (promptingState.value !== 'idle' || (!prompt.value.trim() && !command.value)) {
     return
   }
 
@@ -1381,23 +1381,12 @@ defineExpose({
 
 <style scoped>
 
-.prompt, .prompt * {
-  font-size: 16px;
-}
 
 .prompt {
   
-  container: chat-composer / inline-size;
-  box-shadow: var(--shadow-card);
-  padding: var(--space-8);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border: 1px solid var(--prompt-input-border-color);
-  border-radius: var(--radius-2xl);
-  background-color: var(--prompt-input-bg-color);
-
-  &:focus-within { border-color: color-mix(in srgb, var(--highlight-color) 45%, var(--prompt-input-border-color)); }
 
   &.drag-over {
     border: 1px dashed var(--highlight-color);
@@ -1420,6 +1409,7 @@ defineExpose({
   .attachments {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     margin-bottom: 0.5rem;
     gap: 0.5rem;
@@ -1517,7 +1507,11 @@ defineExpose({
 
       textarea {
         padding: 0px;
-        background-color: var(--prompt-input-bg-color);
+        min-height: var(--space-32);
+        background-color: transparent;
+        font-family: inherit;
+        font-size: var(--font-size-15);
+        line-height: var(--line-height-24);
         color: var(--prompt-input-text-color);
         border: none;
         resize: none;
@@ -1533,7 +1527,7 @@ defineExpose({
 
       textarea::placeholder {
         color: var(--control-placeholder-text-color);
-        opacity: 0.5;
+        opacity: 1;
       }
 
       textarea:focus {
@@ -1554,7 +1548,7 @@ defineExpose({
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
-    margin-top: 0.25rem;
+    margin-top: var(--space-6);
 
     &:not(:has(*)) {
       display: none;
@@ -1571,7 +1565,7 @@ defineExpose({
 
     .prompt-menu {
       position: relative;
-      left: -4px;
+      left: 0;
       .icon {
         transform: scale(1.2);
       }
@@ -1615,7 +1609,7 @@ defineExpose({
       width: 2rem;
       height: 2rem;
       border-radius: 0.375rem;
-      background-color: var(--prompt-icon-color);
+      background-color: var(--color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1623,11 +1617,12 @@ defineExpose({
       svg {
         width: var(--icon-md);
         height: var(--icon-md);
-        stroke: var(--color-surface);
+        stroke: var(--color-on-primary);
       }
 
-      &:has(.disabled) {
+      &:disabled {
         background-color: var(--color-surface-high);
+        svg { stroke: var(--faded-text-color); }
       }
 
       &:has(.canceling) {

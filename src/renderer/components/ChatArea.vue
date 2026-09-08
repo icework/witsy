@@ -3,12 +3,12 @@
     
     <header v-if="!taskPreview" :class="{ 'is-left-most': isLeftMost }">
       
-      <ButtonIcon v-if="!compact" class="toggle-sidebar" v-tooltip="{ text: t('main.toggleSidebar'), position: 'bottom-right' }" @click="toggleSideBar">
+      <ButtonIcon v-if="!compact" class="toggle-sidebar" :aria-label="t('main.toggleSidebar')" v-tooltip="{ text: t('main.toggleSidebar'), position: 'bottom-right' }" @click="toggleSideBar">
         <PanelRightCloseIcon v-if="isLeftMost" />
         <PanelRightOpenIcon v-else />
       </ButtonIcon>
 
-      <ButtonIcon class="new-chat" v-if="isLeftMost && !compact" v-tooltip="{ text: t('common.newChat'), position: 'bottom-right' }" @click="onNewChat">
+      <ButtonIcon class="new-chat" :aria-label="t('common.newChat')" v-if="isLeftMost && !compact" v-tooltip="{ text: t('common.newChat'), position: 'bottom-right' }" @click="onNewChat">
         <MessageCirclePlusIcon />
       </ButtonIcon>
 
@@ -16,7 +16,7 @@
         <IconRunAgent />
       </div> -->
 
-      <div class="title" @dblclick="onRenameChat">{{ chat?.title || '\u00a0' }}</div>
+      <div class="title" @dblclick="onRenameChat">{{ chat?.title || t('chat.empty.title') }}</div>
       <span class="separator" v-if="chat?.title && chat?.createdAt">&bull;</span>
       <div class="created-at" v-if="chat?.title && chat?.createdAt">{{ t('chat.startedAt', { date: formatDate(chat.createdAt) }) }}</div>
       <div v-if="chat?.temporary" class="incognito-badge" :title="t('chat.incognito.help')">
@@ -25,7 +25,7 @@
       </div>
       <div class="flex-push"></div>
 
-      <ButtonIcon class="settings" @click="showModelSettings = !showModelSettings" v-if="!chat?.runtime && store.isFeatureEnabled('chat.settings')">
+      <ButtonIcon class="settings" :aria-label="t('chat.modelSettings')" :aria-expanded="showModelSettings" @click="showModelSettings = !showModelSettings" v-if="!chat?.runtime && store.isFeatureEnabled('chat.settings')">
         <SlidersHorizontalIcon />
       </ButtonIcon>
 
@@ -75,7 +75,7 @@
       <div class="chat-content">
 
         <!-- <div class="chat-content-title">
-          <div class="title" @dblclick="onRenameChat">{{ chat?.title || '\u00a0' }}</div>
+          <div class="title" @dblclick="onRenameChat">{{ chat?.title || t('chat.empty.title') }}</div>
           <div class="spacer"></div> -->
           <!-- <SlidersHorizontalIcon class="icon settings" @click="showModelSettings = !showModelSettings" /> -->
           <!-- <MoreVerticalIcon class="icon" @click="onMenu" />
@@ -118,7 +118,7 @@
       
       </div>
       
-      <ModelSettings v-if="!chat?.runtime && !taskPreview" class="model-settings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
+      <ModelSettings v-if="!chat?.runtime && !taskPreview" class="model-settings" :inert="!showModelSettings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
     
     </main>
 
@@ -490,12 +490,12 @@ defineExpose({
 
       .toggle-sidebar {
         position: relative;
-        top: -2px;
+        top: 0;
       }
 
       .new-chat {
         position: relative;
-        top: -2px;
+        top: 0;
       }
 
       @container (max-width: 600px) {
@@ -583,4 +583,21 @@ defineExpose({
 }
 .chat-content > :deep(.runtime-chat:not(.runtime-configuration)) { width: auto; margin: 0 var(--space-12) var(--space-12); }
 .chat-content > :deep(.runtime-chat:empty) { display: none; }
+
+.split-pane .chat-area > header { flex: 0 0 auto; min-height: var(--space-16); padding: var(--space-6) var(--space-8); }
+.split-pane .chat-area > header .title { font-size: var(--font-size-14); font-weight: var(--font-weight-medium); min-width: 0; }
+.chat-content { container: chat-layout / inline-size; }
+.split-pane .chat-area main .chat-content > :deep(.prompt),
+.chat-content > :deep(.runtime-chat:not(.runtime-configuration)),
+.chat-content > :deep(.chat-agent-picker:not(.task-preview)) {
+  box-sizing: border-box;
+  width: min(calc(100% - var(--space-24)), calc(var(--space-32) * 12));
+  margin-inline: auto;
+}
+.split-pane .chat-area main .chat-content > :deep(.prompt),
+.chat-content > :deep(.runtime-chat:not(.runtime-configuration)) { margin-bottom: var(--space-8); }
+.chat-content > :deep(.runtime-chat:empty) { margin: 0; }
+.model-settings:not(.visible) { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .model-settings { transition: none; } }
+
 </style>

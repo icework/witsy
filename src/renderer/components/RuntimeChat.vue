@@ -49,8 +49,8 @@
       <p v-if="connection?.kind === 'hermes'">{{ t('runtime.hermesDirectory') }}</p>
       <div class="form-actions"><button class="primary" @click="applyTarget" :disabled="busy || loading">{{ t('runtime.useTarget') }}</button></div>
       </section>
-      <div class="runtime-session" v-if="!configuration && chat.runtime"><span class="runtime-dot" /><span>{{ targetDescription }}</span><span class="session-id" v-if="chat.runtime.sessionId" :title="chat.runtime.sessionId">{{ t('runtime.session') }} {{ chat.runtime.sessionId }}</span></div>
-      <p v-else-if="!configuration">{{ t('runtime.applyFirst') }}</p>
+      <div class="runtime-session" v-if="!configuration && chat.runtime?.sessionId"><span class="runtime-dot" /><span>{{ targetDescription }}</span><span class="session-id" v-if="chat.runtime.sessionId" :title="chat.runtime.sessionId">{{ t('runtime.session') }} {{ chat.runtime.sessionId }}</span></div>
+      <p v-else-if="!configuration && !chat.runtime">{{ t('runtime.applyFirst') }}</p>
       <p class="runtime-progress" role="status" v-if="run">{{ t('runtime.status.' + run.status) }} · {{ run.detail }}</p>
       <div v-if="run?.approval" class="runtime-approval">
         <strong>{{ t('runtime.approval') }}</strong>
@@ -58,10 +58,10 @@
         <button v-for="choice in run.approval.choices" :key="choice" @click="approve(choice)" :disabled="loading">{{ t('runtime.choice.' + choice) }}</button>
       </div>
       <p v-if="chat.runtime && targetDirty">{{ t('runtime.applyFirst') }}</p>
-      <form class="runtime-composer" v-if="!configuration && chat.runtime && !targetDirty && !screenshotPending" @submit.prevent="send">
+      <form class="runtime-composer chat-composer" v-if="!configuration && chat.runtime && !targetDirty && !screenshotPending" @submit.prevent="send">
         <ContextScreenshot v-if="contextImage" :image="contextImage" editable :disabled="busy || loading || contextDisabled" @retake="emit('contextRetake')" @remove="emit('contextRemove')" />
-        <textarea ref="input" v-model="prompt" :aria-label="t('runtime.message')" :placeholder="t('runtime.message')" rows="3" @keydown.enter.exact.prevent="send" />
-        <div class="runtime-composer-actions">
+        <textarea ref="input" v-model="prompt" :aria-label="t('runtime.message')" :placeholder="t('runtime.message')" rows="2" @keydown.enter.exact="onComposerEnter" />
+        <div class="runtime-composer-actions composer-actions">
           <button type="button" class="runtime-context" :id="`runtime-context-${chat.uuid}`" :aria-label="t('agentDesign.addContext')" :disabled="busy || loading || contextDisabled" @click="showContextMenu = !showContextMenu"><PlusIcon /></button>
           <PromptMenu v-if="showContextMenu" :anchor="`#runtime-context-${chat.uuid}`" position="above-left" enable-context :context-disabled="busy || loading || contextDisabled" :enable-tools="false" :enable-skills="false" :enable-experts="false" :enable-doc-repo="false" :enable-attachments="false" :enable-deep-research="false" @close="showContextMenu = false" @context-requested="emit('contextRequested', $event)" />
           <slot name="composer-controls" />
@@ -70,7 +70,6 @@
 
         </div>
       </form>
-      <p class="runtime-footnote" v-if="!configuration && !screenshotPending">{{ t('agentDesign.runtimeHelp') }}</p>
     </template>
     <p v-if="error" role="alert">{{ error }}</p>
     <p v-if="notice" role="status">{{ notice }}</p>
@@ -94,6 +93,7 @@ import useEventBus from '@composables/event_bus'
 import { RuntimeBinding, RuntimeConnection, RuntimeRun } from '../../types/runtime'
 import useRuntimeCatalog from '@composables/runtime_catalog'
 import { connectionBinding } from '@services/runtime_defaults'
+import { summarizeChatTitle } from '@services/chat_title'
 import RuntimeConnectionDefaults from './RuntimeConnectionDefaults.vue'
 import NativeConnectionSettings from './NativeConnectionSettings.vue'
 import RuntimeModelVisibility from './RuntimeModelVisibility.vue'
@@ -110,6 +110,11 @@ const notice = ref('')
 const prompt = ref('')
 const input = ref<HTMLTextAreaElement>()
 const showContextMenu = ref(false)
+const onComposerEnter = (event: KeyboardEvent) => {
+  if (event.isComposing) return
+  event.preventDefault()
+  void send()
+}
 const secret = ref('')
 const draft = ref<RuntimeConnection>({ id: '', kind: 'hermes', name: 'Hermes', endpoint: 'http://127.0.0.1:8642' })
 const target = ref<RuntimeBinding>({ connectionId: '', kind: 'hermes', profile: 'default' })
@@ -150,6 +155,11 @@ const persist = (chat: Chat, add = false) => {
     store.saveHistory()
   }
 }
+const summarizeTitle = (chat: Chat) => {
+  void summarizeChatTitle(chat, store.config).then(changed => {
+    if (changed) persist(chat)
+  })
+}
 const receive = (next: RuntimeRun) => {
   if (props.chat?.uuid === next.chatId) {
     if (busy.value && selected.value === next.binding.connectionId) {
@@ -168,6 +178,7 @@ const receive = (next: RuntimeRun) => {
   if (next.error && props.chat.uuid === next.chatId) error.value = next.error
   emit('progress')
   if (!item.message.transient || firstBinding) persist(item.chat)
+  if (next.status === 'completed' && next.text?.trim()) summarizeTitle(item.chat)
 }
 onIpcEvent('runtime-run', receive)
 onIpcEvent('runtime-connections-changed', () => { void window.api.runtime.list().then(list => { connections.value = list }) })
@@ -183,6 +194,9 @@ watch(() => props.chat?.uuid, async () => {
       const message = chat.lastMessage()
       if (message?.role === 'assistant') tracked.set(chat.uuid, { chat, message })
       receive(snapshot)
+    } else if (!props.configuration) {
+      const message = chat.lastMessage()
+      if (message?.role === 'assistant' && !message.transient && message.content?.trim()) summarizeTitle(chat)
     }
   }
 }, { immediate: true })
@@ -239,7 +253,7 @@ const sendMessage = async (input?: string, images: string[] = []) => {
   const message = new Message('assistant')
   message.engine = chat.runtime.kind; message.model = chat.runtime.model || chat.runtime.kind
   chat.addMessage(message)
-  chat.title ||= text.slice(0, 70)
+  if (!chat.hasTitle() && chat.titleSource !== 'manual') chat.title = text.slice(0, 70)
   tracked.set(chat.uuid, { chat, message: chat.lastMessage() })
   run.value = { chatId: chat.uuid, id: '', binding: { ...chat.runtime }, text: '', detail: '', status: 'running' }
   prompt.value = ''; persist(chat, true)
@@ -273,10 +287,7 @@ const approve = (choice: string) => attempt(async () => { if (run.value?.approva
 .runtime-session { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin: 0 0 var(--space-8); color: var(--faded-text-color); font-size: var(--font-size-12); overflow-wrap: anywhere; }
 .runtime-dot { width: var(--space-3); height: var(--space-3); border-radius: var(--radius-full); background: var(--highlight-color); flex-shrink: 0; }
 .session-id { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; opacity: 0.7; }
-.runtime-composer { container: chat-composer / inline-size; padding: var(--space-8); border: var(--space-px) solid var(--prompt-input-border-color); border-radius: var(--radius-2xl); background: var(--prompt-input-bg-color); box-shadow: var(--shadow-card); }
-.runtime-composer:focus-within { border-color: color-mix(in srgb, var(--highlight-color) 45%, var(--prompt-input-border-color)); }
-.runtime-composer textarea { box-sizing: border-box; width: 100%; resize: vertical; max-height: calc(var(--space-32) * 4); padding: 0; border: none; outline: none; box-shadow: none; background: transparent; font-family: inherit; font-size: var(--font-size-16); line-height: 1.5; }
-.runtime-composer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-top: var(--space-8); }
+.runtime-composer textarea { box-sizing: border-box; width: 100%; resize: none; field-sizing: content; min-height: var(--space-32); max-height: calc(var(--space-32) * 4); padding: 0; border: none; outline: none; box-shadow: none; background: transparent; font-family: inherit; font-size: var(--font-size-15); line-height: var(--line-height-24); }
 .runtime-context { display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0; padding: var(--space-4); width: var(--space-16); height: var(--space-16); border: none; border-radius: var(--radius-lg); color: var(--prompt-icon-color); background: transparent; }
 .runtime-context:hover { background: var(--background-color-light); }
 .runtime-context svg { width: var(--icon-lg); height: var(--icon-lg); }
@@ -284,9 +295,10 @@ const approve = (choice: string) => attempt(async () => { if (run.value?.approva
 .runtime-send { display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0 0 0 auto; padding: 0; width: var(--space-16); height: var(--space-16); border-radius: var(--radius-lg); border: none; background: var(--highlight-color); color: var(--highlighted-color); }
 .runtime-send:disabled { background: var(--control-button-disabled-bg-color); color: var(--control-button-disabled-text-color); }
 .runtime-send svg { width: var(--icon-md); height: var(--icon-md); }
-.runtime-footnote { margin: var(--space-4) var(--space-4) 0; font-size: var(--font-size-11); line-height: 1.5; text-align: center; color: var(--faded-text-color); }
 .runtime-approval { padding: var(--space-12); margin-block: var(--space-8); border: var(--space-px) solid var(--color-warning); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--color-warning) 6%, var(--background-color)); }
 .runtime-approval button { margin: var(--space-4); }
 .runtime-chat > [role=alert] { color: var(--color-error); overflow-wrap: anywhere; }
 .runtime-progress { color: var(--faded-text-color); overflow-wrap: anywhere; }
+.runtime-composer textarea::placeholder { color: var(--faded-text-color); opacity: 1; }
+.runtime-context:focus-visible, .runtime-send:focus-visible { outline: var(--space-1) solid var(--color-focus); outline-offset: var(--space-2); }
 </style>

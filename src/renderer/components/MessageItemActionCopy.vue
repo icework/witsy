@@ -1,7 +1,7 @@
 <template>
-  <div class="action copy" v-if="!message.transient" @click="onCopy">
+  <button type="button" class="action copy" v-if="!message.transient" @click="onCopy">
     <ClipboardIcon /> {{ copyLabel }}
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">

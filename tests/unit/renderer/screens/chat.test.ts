@@ -4,6 +4,7 @@ import { defaultCapabilities } from 'multi-llm-ts'
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import ChatScreen from '@screens/Chat.vue'
 import ChatModel from '@models/chat'
+import Message from '@models/message'
 import { store } from '@services/store'
 import Assistant from '@services/assistant'
 import LlmMock from '@tests/mocks/llm'
@@ -57,7 +58,8 @@ test('Renders correctly', () => {
   expect(wrapper.exists()).toBe(true)
   expect(wrapper.find('.chat').exists()).toBe(true)
   expect(wrapper.find('.prompt .model-menu-button').exists()).toBe(false)
-  expect(wrapper.findAll('.prompt .actions .chat-configuration select')).toHaveLength(3)
+  expect(wrapper.find('.prompt .actions .chat-configuration .model-trigger').exists()).toBe(true)
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
   expect(wrapper.find('.chat-agent-picker > .chat-configuration').exists()).toBe(false)
   expect(wrapper.find('.prompt textarea').exists()).toBe(true)
 })
@@ -95,7 +97,8 @@ test('workflow prefills Native config without sending; a manual model override w
   await flushPromises()
   expect(wrapper.vm.assistant.chat.model).toBe('vision')
   expect(prompt).not.toHaveBeenCalled()
-  await wrapper.findAll('.prompt .chat-configuration select')[2].setValue('chat')
+  await wrapper.find('.prompt .model-trigger').trigger('click')
+  await wrapper.findAll('.model-configuration-panel select')[2].setValue('chat')
   expect(wrapper.vm.assistant.chat.model).toBe('chat')
   await wrapper.find('.prompt textarea').trigger('keydown', { key: 'Enter' }); await flushPromises()
   expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Context to explain'), expect.objectContaining({ model: 'chat', instructions: 'Template instruction' }), expect.any(Function), expect.any(Function))
@@ -335,6 +338,7 @@ test('onRenameChat shows dialog and updates title', async () => {
   await wrapper.vm.onRenameChat(chat)
 
   expect(chat.title).toBe('New Title')
+  expect(chat.titleSource).toBe('manual')
 })
 
 test('onRenameChat does nothing when cancelled', async () => {
@@ -495,6 +499,24 @@ test('onForkChat sets up editor and shows it', async () => {
   expect(showSpy).toHaveBeenCalled()
 })
 
+test('forking with an explicit title marks it as manual', async () => {
+  const wrapper: VueWrapper<any> = mount(ChatScreen, { ...stubTeleport })
+  await flushPromises()
+  const chat = wrapper.vm.assistant.chat as ChatModel
+  chat.setEngineModel('mock', 'chat')
+  chat.addMessage(new Message('user', 'Question'))
+  chat.addMessage(new Message('assistant', 'Answer'))
+  wrapper.vm.onForkChat(chat.lastMessage())
+  await flushPromises()
+  await wrapper.find('#fork-chat input[type="text"]').setValue('New Chat')
+  await wrapper.find('#fork-chat button.primary').trigger('click')
+  await flushPromises()
+  const fork = wrapper.vm.assistant.chat as ChatModel
+  expect(fork.uuid).not.toBe(chat.uuid)
+  expect(fork.title).toBe('New Chat')
+  expect(fork.titleSource).toBe('manual')
+})
+
 test('onDeleteMessage shows confirmation dialog', async () => {
   const wrapper: VueWrapper<any> = mount(ChatScreen, { ...stubTeleport })
   await wrapper.vm.$nextTick()
@@ -641,33 +663,40 @@ test.each(['screenshot', 'text'])('Plus menu starts the existing %s context flow
 })
 
 
-test('Runtime switch keeps configuration dropdowns inside the active chat composer', async () => {
+test('Runtime switch keeps a single model trigger in the active composer and opens its current configuration', async () => {
   vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'h', kind: 'hermes', name: 'Local Hermes', endpoint: 'http://localhost:8642' }])
   const wrapper = mount(ChatScreen, { ...stubTeleport })
   await flushPromises()
-  await wrapper.find('.prompt .chat-configuration select').setValue('h')
+  await wrapper.find('.prompt .model-trigger').trigger('click')
+  await wrapper.find('.model-configuration-panel select').setValue('h')
   await flushPromises()
   expect(wrapper.find('.prompt').exists()).toBe(false)
   const controls = wrapper.find('.runtime-composer .chat-configuration')
-  expect(controls.findAll('select')).toHaveLength(3)
+  expect(controls.find('.model-trigger').exists()).toBe(true)
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
   expect(wrapper.findAll('.chat-configuration')).toHaveLength(1)
-  await controls.find('select').setValue('native')
+  await controls.find('.model-trigger').trigger('click')
+  expect(wrapper.findAll('.model-configuration-panel select')).toHaveLength(3)
+  await wrapper.find('.model-configuration-panel select').setValue('native')
   await flushPromises()
-  expect(wrapper.findAll('.prompt .chat-configuration select')).toHaveLength(3)
+  expect(wrapper.find('.prompt .model-trigger').exists()).toBe(true)
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
 })
 
 test.each(['hermes', 'opencode'] as const)('%s model changes preserve an unsent draft and use a new conversation', async kind => {
   vi.mocked(window.api.runtime.list).mockResolvedValue([{ id: 'runtime', kind, name: 'Local', endpoint: 'http://localhost:8642' }])
   vi.mocked(window.api.runtime.catalog).mockResolvedValue({ profiles: [], agents: [], models: [{ provider: 'p', id: 'm1', name: 'M1' }, { provider: 'p', id: 'm2', name: 'M2' }] })
   const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  await wrapper.find('.prompt .chat-configuration select').setValue('runtime'); await flushPromises()
+  await wrapper.find('.prompt .model-trigger').trigger('click')
+  await wrapper.find('.model-configuration-panel select').setValue('runtime'); await flushPromises()
   await wrapper.find('.runtime-chat textarea').setValue('Keep this draft')
   const previous = wrapper.vm.assistant.chat
-  await wrapper.find('.runtime-composer .chat-configuration').findAll('select')[1].setValue('p'); await flushPromises()
+  await wrapper.find('.runtime-composer .model-trigger').trigger('click')
+  await wrapper.findAll('.model-configuration-panel select')[1].setValue('p'); await flushPromises()
   expect(wrapper.find<HTMLTextAreaElement>('.runtime-chat textarea').element.value).toBe('Keep this draft')
   expect(wrapper.vm.assistant.chat.uuid).not.toBe(previous.uuid)
   expect(wrapper.vm.assistant.chat.runtime).toMatchObject({ provider: 'p', model: 'm1' })
-  await wrapper.find('.runtime-composer .chat-configuration').findAll('select')[2].setValue('m2'); await flushPromises()
+  await wrapper.findAll('.model-configuration-panel select')[2].setValue('m2'); await flushPromises()
   expect(wrapper.find<HTMLTextAreaElement>('.runtime-chat textarea').element.value).toBe('Keep this draft')
   expect(wrapper.vm.assistant.chat.runtime?.model).toBe('m2')
   expect(window.api.runtime.start).not.toHaveBeenCalled()

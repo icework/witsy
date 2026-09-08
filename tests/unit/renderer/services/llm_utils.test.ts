@@ -1,9 +1,10 @@
 import { LlmChunkContent, LlmChunkTool, LlmChunkUsage, LlmEngine } from 'multi-llm-ts'
-import { beforeAll, beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { useWindowMock } from '@tests/mocks/window'
 import defaults from '@root/defaults/settings.json'
 import LlmUtils from '@services/llm_utils'
 import Message from '@models/message'
+import LlmFactory, { ILlmManager } from '@services/llms/llm'
 
 let config = defaults as any
 
@@ -38,6 +39,10 @@ beforeEach(() => {
   } as any
 })
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
 // helper to create a mock LlmEngine with a generate method yielding chunks
 const mockLlmEngine = (chunks: (LlmChunkContent | LlmChunkUsage | LlmChunkTool)[]): LlmEngine => {
   return {
@@ -49,6 +54,168 @@ const mockLlmEngine = (chunks: (LlmChunkContent | LlmChunkUsage | LlmChunkTool)[
     }
   } as unknown as LlmEngine
 }
+
+const mockTitleModel = (title = 'A short summary') => {
+  config.llm.engine = 'openai'
+  config.engines.openai.model.chat = 'legacy-chat'
+  delete config.nativeRuntime
+  const models = {
+    openai: ['legacy-chat', 'gpt-5-mini'],
+    anthropic: ['default-chat', 'claude-haiku-4-5'],
+  }
+  const llm = mockLlmEngine([{ type: 'content', text: title, done: true }])
+  const generate = vi.spyOn(llm, 'generate')
+  const manager = {
+    getChatEngines: vi.fn(() => Object.keys(models)),
+    getEngineName: vi.fn((provider: string) => provider),
+    isEngineConfigured: vi.fn(() => true),
+    getChatModels: vi.fn((provider: keyof typeof models) => models[provider].map(id => ({ id, name: id }))),
+    getChatModel: vi.fn((provider: keyof typeof models, id: string) => models[provider].includes(id) ? { id } : null),
+    igniteEngine: vi.fn(() => llm),
+    getChatEngineModel: vi.fn(),
+  }
+  vi.spyOn(LlmFactory, 'manager').mockReturnValue(manager as unknown as ILlmManager)
+  return { manager, generate }
+}
+
+test('getTitle uses the explicit default chat model without changing settings or selecting a simple-task model', async () => {
+  const { manager, generate } = mockTitleModel()
+  config.nativeRuntime = { defaultProvider: 'anthropic', defaultModel: 'default-chat' }
+  const before = JSON.stringify(config)
+  const result = await new LlmUtils(config).getTitle([new Message('user', 'Plan a short trip'), new Message('assistant', 'Visit the coast')])
+
+  expect(result).toBe('A short summary')
+  expect(manager.igniteEngine).toHaveBeenCalledWith('anthropic')
+  expect(generate.mock.calls[0][0]).toEqual({ id: 'default-chat' })
+  expect(manager.getChatEngineModel).not.toHaveBeenCalled()
+  expect(JSON.stringify(config)).toBe(before)
+})
+
+test('getTitle uses the legacy default chat model when no Native default is saved', async () => {
+  const { manager, generate } = mockTitleModel()
+
+  await new LlmUtils(config).getTitle([new Message('user', 'Plan a short trip')])
+
+  expect(manager.igniteEngine).toHaveBeenCalledWith('openai')
+  expect(generate.mock.calls[0][0]).toEqual({ id: 'legacy-chat' })
+  expect(manager.getChatEngineModel).not.toHaveBeenCalled()
+})
+
+test('getTitle falls back to an available visible model when saved defaults are hidden', async () => {
+  const { generate } = mockTitleModel()
+  config.nativeRuntime = {
+    defaultProvider: 'openai', defaultModel: 'legacy-chat',
+    modelVisibility: { providers: ['anthropic'], models: { anthropic: ['default-chat'] } },
+  }
+
+  await new LlmUtils(config).getTitle([new Message('user', 'Plan a short trip')])
+
+  expect(generate.mock.calls[0][0]).toEqual({ id: 'default-chat' })
+})
+
+test('getTitle skips generation if no configured visible model is available', async () => {
+  const { manager, generate } = mockTitleModel()
+  manager.isEngineConfigured.mockReturnValue(false)
+
+  expect(await new LlmUtils(config).getTitle([new Message('user', 'Plan a short trip')])).toBeNull()
+  expect(manager.igniteEngine).not.toHaveBeenCalled()
+  expect(generate).not.toHaveBeenCalled()
+})
+
+test('getTitle sends only bounded plain-text copies of the opening exchange', async () => {
+  const { generate } = mockTitleModel()
+  const user = Message.fromJson({
+    role: 'user', content: '旅'.repeat(4100),
+    attachments: [{ url: '/private/screenshot.png', content: 'private image bytes' }],
+    expert: { name: 'Private expert', prompt: 'Private expert instructions' },
+    skill: { id: 'private-skill', name: 'Private skill', instructions: 'Private skill instructions' },
+  })
+  const assistant = Message.fromJson({
+    role: 'assistant', content: '<tool id="lookup"></tool>' + '海'.repeat(4100),
+    reasoning: 'Private reasoning',
+    toolCalls: [{ id: 'lookup', function: 'search', result: 'Private tool output' }],
+  })
+  const uiOnly = new Message('user', 'Internal UI text')
+  uiOnly.uiOnly = true
+  const thread = [
+    new Message('assistant', 'An earlier assistant message'),
+    new Message('system', 'Private system instructions'),
+    uiOnly, user,
+    new Message('assistant', '<tool id="lookup"></tool>'),
+    assistant, new Message('user', 'Do not include this later turn'),
+  ]
+  const original = JSON.stringify(thread)
+
+  await new LlmUtils(config).getTitle(thread)
+
+  const messages = generate.mock.calls[0][1] as Message[]
+  expect(messages.map(message => message.role)).toEqual(['system', 'user', 'assistant', 'user'])
+  expect(messages[1].content).toBe('旅'.repeat(4000))
+  expect(messages[2].content).toBe('海'.repeat(4000))
+  expect(messages[1]).not.toBe(user)
+  expect(messages[2]).not.toBe(assistant)
+  for (const message of messages) {
+    expect(message.attachments).toEqual([])
+    expect(message.toolCalls).toEqual([])
+    expect(message.expert).toBeUndefined()
+    expect(message.skill).toBeUndefined()
+    expect(message.reasoning).toBeFalsy()
+  }
+  expect(generate.mock.calls[0][2]).toMatchObject({ tools: false, toolCallsInThread: false, reasoning: false, thinkingBudget: 0 })
+  expect(JSON.stringify(thread)).toBe(original)
+})
+
+test('getTitle can summarize an image-only opening using the assistant text without sending the image', async () => {
+  const { generate } = mockTitleModel('海边落日')
+  const user = new Message('user', '')
+  user.setImage('data:image/png;base64,private-image')
+
+  const title = await new LlmUtils(config).getTitle([user, new Message('assistant', '图片显示海边的落日。')])
+
+  expect(title).toBe('海边落日')
+  const messages = generate.mock.calls[0][1] as Message[]
+  expect(messages[1].content).toBe('')
+  expect(messages[1].type).toBe('text')
+  expect(messages[2].content).toBe('图片显示海边的落日。')
+  expect(JSON.stringify(messages)).not.toContain('private-image')
+})
+
+test.each([
+  { thread: [] },
+  { thread: [new Message('system', 'Only system text')] },
+  { thread: [new Message('user', ''), new Message('assistant', '')] },
+])('getTitle skips exchanges without usable conversation text: $thread', async ({ thread }) => {
+  const { generate } = mockTitleModel()
+
+  expect(await new LlmUtils(config).getTitle(thread)).toBeNull()
+  expect(generate).not.toHaveBeenCalled()
+})
+
+test('getTitle removes reasoning, markup, prefixes, quotes, and line breaks', async () => {
+  mockTitleModel('<think>Private reasoning</think>\n# <b>Title:</b> “北京\n周末游”')
+
+  expect(await new LlmUtils(config).getTitle([new Message('user', '北京周末去哪？')])).toBe('北京 周末游')
+})
+
+test('getTitle limits long results to 60 Unicode code points without splitting emoji', async () => {
+  mockTitleModel('🌊'.repeat(70))
+
+  expect(await new LlmUtils(config).getTitle([new Message('user', 'A coastal trip')])).toBe('🌊'.repeat(60))
+})
+
+test.each(['', '   ', '<think>Only reasoning</think>', '<think>Unfinished reasoning', '**Title:** ""'])('getTitle returns null for unusable output: %s', async (output) => {
+  mockTitleModel(output)
+
+  expect(await new LlmUtils(config).getTitle([new Message('user', 'A very long prompt that should not become the title')])).toBeNull()
+})
+
+test('getTitle returns null when the default model request fails', async () => {
+  const { generate } = mockTitleModel()
+  generate.mockImplementation(() => { throw new Error('Provider unavailable') })
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+
+  expect(await new LlmUtils(config).getTitle([new Message('user', 'A coastal trip')])).toBeNull()
+})
 
 test('complete collects content chunks into a string', async () => {
   const llm = mockLlmEngine([

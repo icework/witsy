@@ -16,8 +16,10 @@
             <label for="archive-folder">{{ t('settings.chat.history.archiveFolder') }}</label>
             <div class="folder-control">
               <input id="archive-folder" :value="archiveFolder" readonly :placeholder="t('settings.chat.history.notConfigured')" :title="archiveFolder" />
-              <button type="button" @click="chooseArchiveFolder">{{ t('common.browse') }}</button>
-              <button v-if="archiveFolder" type="button" class="secondary" @click="clearArchiveFolder">{{ t('common.clear') }}</button>
+              <div class="folder-actions">
+                <button type="button" @click="chooseArchiveFolder">{{ t('common.browse') }}</button>
+                <button v-if="archiveFolder" type="button" class="secondary" @click="clearArchiveFolder">{{ t('common.clear') }}</button>
+              </div>
             </div>
             <div class="help">{{ t('settings.chat.history.archiveHelp') }}</div>
           </div>
@@ -192,14 +194,10 @@ defineExpose({ load })
 
 .history-settings { margin-bottom: var(--space-12); }
 
-.folder-control { display: flex; gap: var(--space-2); align-items: center; min-width: 0; }
+.folder-control { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; width: 100%; min-width: 0; }
 .folder-control input { flex: 1 1 16rem; min-width: 0; }
+.folder-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .folder-control button { flex: 0 0 auto; }
-
-@container (max-width: 520px) {
-  .folder-control { flex-wrap: wrap; }
-  .folder-control input { flex-basis: 100%; }
-}
 
 .slider-label.small {
   font-size: 10.5px;

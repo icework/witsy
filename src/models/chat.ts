@@ -14,6 +14,7 @@ export default class Chat implements ChatBase {
   chatAgent?: ChatAgent
   uuid: string
   title?: string
+  titleSource?: 'manual' | 'generated'
   createdAt: number
   lastModified: number
   engine?: string
@@ -47,6 +48,7 @@ export default class Chat implements ChatBase {
     chat.runtime = obj.runtime ? { ...obj.runtime } : undefined
     chat.temporary = obj.temporary === true
     chat.title = obj.title
+    chat.titleSource = obj.titleSource
     chat.createdAt = obj.createdAt
     chat.lastModified = obj.lastModified || obj.createdAt
     chat.engine = obj.engine || undefined
@@ -69,7 +71,7 @@ export default class Chat implements ChatBase {
 
     // any diff spotted
     let patched = false
-    if (this.title !== obj.title || this.lastModified !== obj.lastModified) {
+    if (this.title !== obj.title || this.titleSource !== obj.titleSource || this.lastModified !== obj.lastModified) {
       patched = true
     }
 
@@ -78,6 +80,7 @@ export default class Chat implements ChatBase {
 
     // header
     this.title = obj.title
+    this.titleSource = obj.titleSource
     this.lastModified = obj.lastModified
     this.instructions = obj.instructions
     this.disableStreaming = obj.disableStreaming

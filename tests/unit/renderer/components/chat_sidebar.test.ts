@@ -56,14 +56,14 @@ test('No chat', async () => {
   expect(wrapper.exists()).toBe(true)
   expect(wrapper.find('.sp-sidebar').exists()).toBe(true)
   expect(wrapper.find('.sp-sidebar .chats').exists()).toBe(true)
-  expect(wrapper.find('.sp-sidebar footer').exists()).toBe(true)
+  expect(wrapper.find('.sp-sidebar header .new-chat').exists()).toBe(true)
   expect(wrapper.find('.sp-sidebar footer.actions').exists()).toBe(false)
   expect(wrapper.find('.resizer').exists()).toBe(true)
 })
 
 test('New Chat', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withChatCallbacks({}))
-  await wrapper.find('.sp-sidebar footer .new-chat').trigger('click')
+  await wrapper.find('.sp-sidebar header .new-chat').trigger('click')
   expect(chatCallbacksMock.onNewChat).toHaveBeenCalled()
 })
 
@@ -112,7 +112,7 @@ test('Switches to folder mode', async () => {
 
 test('Filter Textbox', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keyup')
   expect(searchState.filter.value).toBe('Test')
@@ -135,7 +135,7 @@ test('Filter Single', async () => {
 
 test('Enter navigates to next match', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keydown.enter')
   expect(searchState.navigate.value).toBe(1)
@@ -143,7 +143,7 @@ test('Enter navigates to next match', async () => {
 
 test('Shift+Enter navigates to previous match', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keydown.enter', { shiftKey: true })
   expect(searchState.navigate.value).toBe(-1)
@@ -151,7 +151,7 @@ test('Shift+Enter navigates to previous match', async () => {
 
 test('Escape closes filter', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   expect(wrapper.find('.sp-sidebar .chat-list-tools .search').exists()).toBe(true)
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keydown.escape')
   expect(wrapper.find('.sp-sidebar .chat-list-tools .search').exists()).toBe(false)
@@ -159,7 +159,7 @@ test('Escape closes filter', async () => {
 
 test('clearFilter exposed method', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keyup')
   expect(searchState.filter.value).toBe('Test')
@@ -180,7 +180,7 @@ test('startFilter exposed method', async () => {
 test('Filtering disables localSearch', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
   searchState.localSearch.value = true
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keyup')
   expect(searchState.localSearch.value).toBe(false)
@@ -188,7 +188,7 @@ test('Filtering disables localSearch', async () => {
 
 test('Filtering closes when filter cleared externally', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keyup')
   expect(wrapper.find('.sp-sidebar .chat-list-tools .search').exists()).toBe(true)
@@ -201,7 +201,7 @@ test('Filtering closes when filter cleared externally', async () => {
 
 test('Backspacing to empty keeps filter open', async () => {
   const wrapper: VueWrapper<any> = mount(ChatSidebar, withSearchState())
-  await wrapper.find('.sp-sidebar .chat-list-tools button[name=search]').trigger('click')
+  await wrapper.find('.sp-sidebar .chat-list-tools .search-trigger').trigger('click')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').setValue('Test')
   await wrapper.find('.sp-sidebar .chat-list-tools .search input[name=filter]').trigger('keyup')
   expect(searchState.filter.value).toBe('Test')

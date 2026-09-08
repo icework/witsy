@@ -2,7 +2,7 @@
   <section ref="pickerElement" class="chat-agent-picker" :class="{ pending, 'task-preview': taskPreview }">
     <BackgroundTaskLauncher v-if="taskPreview" v-model="taskInput" :name="state.workflowName" :agent="chat.chatAgent?.name || chat.runtime?.kind || t('runtime.native')" :context-kind="state.contextKind" :image="state.image" :instructions="question" :disabled="working || submitted || busy || state.busy" :error="error || state.error" @submit="ask" @cancel="dismissTask" />
     <div v-if="!taskPreview" class="agent-row agent-toolbar">
-      <label class="agent-select"><BotIcon aria-hidden="true" /><span>{{ t('chatAgent.label') }}</span>
+      <label class="agent-select"><BotIcon aria-hidden="true" />
         <select :title="agents.find(a => a.id === selected)?.name || chat.chatAgent?.name || t('chatAgent.chooseAgent')" :aria-label="t('chatAgent.label')" v-model="selected" @change="choose" :disabled="busy || state.busy || state.capturing">
           <option value="" disabled>{{ chat.chatAgent?.name || t('chatAgent.chooseAgent') }}</option>
           <option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }} ({{ agent.kind }})</option>

@@ -32,7 +32,8 @@ test('new workflow saves context input, Agent, instructions and its own hotkey',
   await wrapper.findAll('form select')[0].setValue('selected-text')
   await wrapper.findAll('form select')[1].setValue('h')
   await wrapper.find('textarea').setValue('Translate into Chinese')
-  await wrapper.find('input[placeholder="Command+Shift+2"]').setValue('Command+Shift+7')
+  await wrapper.find('.recorder').trigger('click')
+  await wrapper.find('.recorder').trigger('keydown', { key: '&', code: 'Digit7', metaKey: true, shiftKey: true })
   const saved = { ...workflow, id: 'selection', name: 'Translate selection', contextInput: 'selected-text' as const, mode: 'task' as const, prompt: 'Translate into Chinese', accelerator: 'Command+Shift+7' }
   vi.mocked(window.api.chatAgents.saveWorkflow).mockResolvedValue(saved)
   vi.mocked(window.api.chatAgents.workflows).mockResolvedValue([workflow, saved])
@@ -44,11 +45,12 @@ test('new workflow saves context input, Agent, instructions and its own hotkey',
 test('a failed shortcut save leaves the saved item and edited draft visible', async () => {
   const wrapper = mount(SettingsContextWorkflows)
   await wrapper.vm.load(); await flushPromises()
-  await wrapper.find('input[placeholder="Command+Shift+2"]').setValue('Command+Shift+3')
+  await wrapper.find('.recorder').trigger('click')
+  await wrapper.find('.recorder').trigger('keydown', { key: '#', code: 'Digit3', metaKey: true, shiftKey: true })
   vi.mocked(window.api.chatAgents.saveWorkflow).mockRejectedValue(new Error('Shortcut conflict'))
   await wrapper.find('form').trigger('submit'); await flushPromises()
   expect(wrapper.find('[role="alert"]').text()).toBe('Shortcut conflict')
-  expect(wrapper.find<HTMLInputElement>('input[placeholder="Command+Shift+2"]').element.value).toBe('Command+Shift+3')
+  expect(wrapper.find('.recorder').text()).toBe('Command+Shift+3')
   expect(workflow.accelerator).toBe('Command+Shift+2')
 })
 

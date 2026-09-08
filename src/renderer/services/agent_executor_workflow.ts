@@ -10,6 +10,7 @@ import AgentExecutorBase from './agent_executor_base'
 import Generator, { GenerationCallback, GenerationOpts, GenerationResult, LlmChunkCallback } from './generator'
 import { fullExpertI18n, getLlmLocale, i18nInstructions, setLlmLocale, t } from './i18n'
 import LlmUtils from './llm_utils'
+import { summarizeChatTitle } from './chat_title'
 import { replacePromptInputs } from './prompt'
 import { processJsonSchema } from './schema'
 
@@ -277,8 +278,7 @@ export default class AgentWorkflowExecutor extends AgentExecutorBase {
         }
 
         generationCallback?.('before_title')
-        const title = await this.getTitle(opts.engine, opts.model, opts.chat.messages)
-        opts.chat.title = title
+        await summarizeChatTitle(opts.chat, this.config)
       }
 
       // restore llm locale
@@ -342,8 +342,4 @@ export default class AgentWorkflowExecutor extends AgentExecutorBase {
     })
   }
 
-  private async getTitle(engine: string, model: string, messages: Message[]): Promise<string> {
-    const llmUtils = new LlmUtils(this.config)
-    return await llmUtils.getTitle(engine, model, messages)
-  }
 }

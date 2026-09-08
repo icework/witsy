@@ -1,52 +1,44 @@
 <template>
   <div class="sp-sidebar chat-sidebar" :class="{ 'manual-resize': manualResize }" :style="`flex-basis: ${width}px; display: ${visible ? 'inherit' : 'none'}`">
     <header>
-      <!-- <div class="icon run-agent" v-tooltip="{ text: t('common.runAgent'), position: 'bottom-left' }" @click="onRunAgent">
-        <IconRunAgent />
-      </div>
-      <div class="icon new-chat" v-tooltip="{ text: t('common.newChat'), position: 'bottom-left' }" @click="onNewChat" >
-        <IconNewChat />
-      </div> -->
       <div class="title">{{ t('chatList.title') }}</div>
+      <button type="button" class="new-chat" :aria-label="t('common.newChat')" :title="t('common.newChat')" @click="onNewChat"><SquarePenIcon /></button>
     </header>
     <div class="chat-list-tools">
       <div class="form search" v-if="filtering">
         <div class="form-field">
-          <input ref="inputFilter" name="filter" v-model="filter" :placeholder="t('common.search')" @keyup="onFilterChange" @keydown.enter.prevent="onFilterNavigate" @keydown.escape.prevent="onToggleFilter" />
-          <CircleXIcon class="clear-filter" @click="onClearFilter" v-if="filtering" />
+          <input ref="inputFilter" :aria-label="t('common.search')" name="filter" v-model="filter" :placeholder="t('common.search')" @keyup="onFilterChange" @keydown.enter.prevent="onFilterNavigate" @keydown.escape.prevent="onToggleFilter" />
+          <button type="button" class="clear-filter" :aria-label="t('common.clear')" @click="onClearFilter"><CircleXIcon /></button>
         </div>
       </div>
+      <button type="button" class="search-trigger" v-if="!filtering" :disabled="selectMode" @click="onToggleFilter"><SearchIcon /><span>{{ t('chatList.searchPlaceholder') }}</span></button>
       <div class="display-mode button-group" v-if="!filtering && store.isFeatureEnabled('chat.folders')">
-        <button name="timeline" :class="{active: displayMode == 'timeline'}" @click="displayMode = 'timeline'">
+        <button name="timeline" :class="{active: displayMode == 'timeline'}" :aria-pressed="displayMode === 'timeline'" @click="displayMode = 'timeline'">
           <MessagesSquareIcon />
           {{ t('chatList.displayMode.timeline') }}
         </button>
-        <button name="folders" :class="{active: displayMode == 'folder'}" @click="displayMode = 'folder'">
+        <button name="folders" :class="{active: displayMode == 'folder'}" :aria-pressed="displayMode === 'folder'" @click="displayMode = 'folder'">
           <FolderIcon />
           {{ t('chatList.displayMode.folders') }}
         </button>
       </div>
       <div class="toolbar">
-        <button name="select" @click="selectMode = !selectMode">{{ selectMode ? t('common.done') : t('common.select') }}</button>
+        <button name="select" :aria-pressed="selectMode" @click="selectMode = !selectMode">{{ selectMode ? t('common.done') : t('common.select') }}</button>
         <button name="create-folder" @click="onNewFolder" v-if="displayMode === 'folder'"><FolderPlusIcon /> {{ t('sidebar.newFolder.title') }}</button>
         <div class="flex-push"></div>
         <!-- <button name="sort" :disabled="selectMode">{{ t('common.sortBy') }} <ChevronDownIcon /></button> -->
-        <button name="search" :disabled="selectMode" @click="onToggleFilter"><SearchIcon /></button>
+
       </div>
     </div>
     <main>
       <ChatList :displayMode="displayMode" :chat="chat" :select-mode="selectMode" :filter="filter" :generating-chat-ids="generatingChatIds" ref="chatList" />
     </main>
-    <footer v-if="!selectMode">
-      <!-- <button class="run-agent cta" @click="onRunAgent"><MessageCircleMoreIcon /> {{ t('common.runAgent') }}</button> -->
-      <button class="new-chat cta" @click="onNewChat"><MessageCirclePlusIcon /> {{ t('common.newChat') }}</button>
-    </footer>
-    <footer v-else class="select-actions">
+    <footer v-if="selectMode" class="select-actions">
       <button name="select-all" @click="onSelectAll">{{ t('common.selectAllShort') }}</button>
       <button name="unselect-all" @click="onUnselectAll">{{ t('common.unselectAllShort') }}</button>
       <div class="flex-push"/>
       <button name="move" @click="onMove" v-if="displayMode === 'folder'"><FolderInputIcon /> {{ t('common.move') }}</button>
-      <button name="delete" @click="onDelete"><Trash2Icon /></button>
+      <button name="delete" :aria-label="t('common.delete')" @click="onDelete"><Trash2Icon /></button>
     </footer>
     <div class="resizer" @mousedown="onResizeSidebarStart" v-if="visible">&nbsp;</div>
   </div>
@@ -61,7 +53,7 @@ import Dialog from '@renderer/utils/dialog'
 import type { ChatCallbacks, SearchState } from '@screens/Chat.vue'
 import { t } from '@services/i18n'
 import { store } from '@services/store'
-import { CircleXIcon, FolderIcon, FolderInputIcon, FolderPlusIcon, MessageCirclePlusIcon, MessagesSquareIcon, SearchIcon, Trash2Icon } from 'lucide-vue-next'
+import { CircleXIcon, FolderIcon, FolderInputIcon, FolderPlusIcon, MessagesSquareIcon, SearchIcon, SquarePenIcon, Trash2Icon } from 'lucide-vue-next'
 import { ChatListMode } from 'types/config'
 import { v4 as uuidv4 } from 'uuid'
 import { inject, nextTick, onMounted, Ref, ref, watch } from 'vue'
@@ -98,7 +90,7 @@ let panelOffset = 0
 
 onMounted(async () => {
   visible.value = window.api.store.get('sidebarVisible', true)
-  width.value = window.api.store.get('sidebarWidth', 400)
+  width.value = window.api.store.get('sidebarWidth', 280)
 
   // depends on feature activation
   if (store.isFeatureEnabled('chat.folders')) {
@@ -231,7 +223,7 @@ const onResizeSidebarStart = async (event: MouseEvent) => {
 
 const onResizeSidebarMove = (event: Event) => {
   const mouseEvent = event as MouseEvent
-  width.value = Math.max(300, Math.min(500, mouseEvent.clientX - panelOffset))
+  width.value = Math.max(220, Math.min(400, mouseEvent.clientX - panelOffset))
 }
 
 const onResizeSidebarEnd = () => {
@@ -272,134 +264,46 @@ defineExpose({
 
 <style scoped>
 
-.split-pane {
-  
-  .sp-sidebar {
-    
-    flex: 0 0 0px;
-    max-width: 36%;
-    min-width: 0;
-    position: relative;
-    overflow: hidden;
-
-    /* resizing animation except when dragging */
-    transition: flex-basis 0.15s ease-in-out;
-    &.manual-resize {
-      transition: none;
-    }
-
-    .chat-list-tools {
-
-      padding: 0rem 1rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-
-      .search {
-      
-        width: 100%;
-
-        .form-field {
-          margin: 0;
-          position: relative;
-
-          input {
-            padding: 0.625rem 0.75rem;
-            font-size: 14px;
-          }
-
-          .search-icon {
-            position: absolute;
-            right: 1rem;
-            width: var(--icon-lg);
-            height: var(--icon-lg);
-            opacity: 0.5;
-          }
-
-          .clear-filter {
-            position: absolute;
-            cursor: pointer;
-            right: 1em;
-            width: var(--icon-lg);
-            height: var(--icon-lg);
-            opacity: 0.5;
-          }
-
-        }
-
-      }
-
-      .display-mode {
-        width: 100%;
-        align-self: center;
-        display: flex;
-        justify-content: space-between;
-
-
-        button {
-          flex: 1;
-          padding: 0.5rem 1rem;
-        }
-
-      }
-
-      .toolbar {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-
-        button {
-
-          padding: 0.5rem;
-          font-weight: 500;
-          gap: 0.25rem;
-
-          &[name=sort] svg {
-            fill: var(--text-color);
-          }
-
-          &:first-child {
-            margin-left: 0;
-          }
-
-          &:last-child {
-            margin-right: 0;
-          }
-        }
-      }
-    }
-
-    footer {
-      flex-direction: row;
-      align-items: center;
-
-      &.select-actions {
-        margin: 0rem 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        padding: 10px 12px;
-      }
-
-      button[name=delete] svg {
-        stroke: var(--color-error);
-      }
-
-    }
-
-    .resizer {
-      position: absolute;
-      right: 0;
-      width: var(--space-4);
-      height: 100%;
-      cursor: ew-resize;
-      background-color: transparent;
-      z-index: 2;
-    }
-  }
-
+.split-pane .chat-sidebar {
+  flex: 0 0 0;
+  max-width: min(30%, 340px);
+  min-width: 0;
+  position: relative;
+  padding: var(--space-6) 0;
+  gap: var(--space-6);
+  background: var(--color-surface);
+  border-color: var(--color-outline-subtle);
+  transition: flex-basis 150ms ease;
+}
+.split-pane .chat-sidebar.manual-resize { transition: none; }
+.split-pane .chat-sidebar header { min-height: var(--space-16); flex: 0 0 auto; padding: 0 var(--space-6) 0 var(--space-8); background: transparent; gap: var(--space-4); }
+.split-pane .chat-sidebar header .title { font-size: var(--font-size-13); font-weight: var(--font-weight-semibold); }
+.new-chat { display: grid; place-items: center; width: var(--space-16); height: var(--space-16); padding: var(--space-4); margin: 0; border: none; border-radius: var(--radius-lg); background: transparent; color: var(--sidebar-text-color); }
+.new-chat:hover { background: var(--color-surface-high); }
+.new-chat svg { width: var(--icon-lg); height: var(--icon-lg); }
+.chat-list-tools { padding: 0 var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+.search-trigger { display: flex; justify-content: flex-start; align-items: center; gap: var(--space-4); min-height: var(--space-16); margin: 0; padding: var(--space-3) var(--space-4); border: var(--space-px) solid var(--color-outline-subtle); border-radius: var(--radius-lg); background: var(--color-surface-lowest); color: var(--faded-text-color); font-size: var(--font-size-12); text-align: left; }
+.search-trigger svg { width: var(--icon-md); height: var(--icon-md); }
+.search { width: 100%; }
+.search .form-field { margin: 0; position: relative; }
+.search input { min-width: 0; padding: var(--space-4) var(--space-16) var(--space-4) var(--space-6); font-size: var(--font-size-12); border-radius: var(--radius-lg); }
+.clear-filter { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); display: grid; place-items: center; margin: 0; padding: var(--space-2); border: none; background: transparent; color: var(--faded-text-color); }
+.clear-filter svg { width: var(--icon-md); height: var(--icon-md); }
+.display-mode.button-group { display: flex; width: 100%; padding: var(--space-1); box-sizing: border-box; border-radius: var(--radius-lg); background: var(--color-surface-base); }
+.display-mode.button-group button { flex: 1; min-width: 0; justify-content: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); margin: 0; border: none; border-radius: var(--radius-md); color: var(--faded-text-color); background: transparent; font-size: var(--font-size-12); }
+.display-mode.button-group button.active { background: var(--color-surface-lowest); color: var(--text-color); box-shadow: var(--shadow-card); }
+.display-mode svg { width: var(--icon-md); height: var(--icon-md); }
+.toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.toolbar button { margin: 0; padding: var(--space-2) var(--space-4); border: none; background: transparent; color: var(--faded-text-color); font-size: var(--font-size-11); border-radius: var(--radius-sm); }
+.toolbar button:hover { background: var(--color-surface-high); color: var(--text-color); }
+.split-pane .chat-sidebar main { padding: 0 var(--space-4); min-height: 0; }
+.split-pane .chat-sidebar footer.select-actions { flex-shrink: 0; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-2); padding: var(--space-4); margin: 0 var(--space-4); border-top: var(--space-px) solid var(--border-color); }
+.select-actions button { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-12); }
+.select-actions button[name=delete] { color: var(--color-error); }
+.resizer { position: absolute; top: 0; right: 0; width: var(--space-2); height: 100%; cursor: ew-resize; z-index: 2; }
+.resizer:hover { background: var(--color-primary); }
+@media (max-width: 860px) {
+  .split-pane .chat-sidebar { max-width: 220px; }
 }
 
 </style>

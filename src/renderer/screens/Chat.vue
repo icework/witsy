@@ -553,6 +553,7 @@ const onRenameChat = async (chat: Chat) => {
   });
   if (title) {
     chat.title = title
+    chat.titleSource = 'manual'
     store.saveHistory()
   }
 }
@@ -681,6 +682,7 @@ const forkChat = (chat: Chat, message: Message, title: string, engine: string, m
 
   const fork = chat.fork(message)
   fork.title = title
+  fork.titleSource = 'manual'
   fork.engine = engine
   fork.model = model
 
@@ -1118,16 +1120,8 @@ defineExpose({
 </script>
 
 <style scoped>
-
-/* Chat list adds one pixel
-   To the main window's height somehow
-   We don't know why though */
 .chat.split-pane {
-  height: calc(100vh - var(--window-toolbar-height) - 2.5rem - 1px) !important;
+  min-height: 0;
+  align-self: stretch;
 }
-
-.chat.split-pane.task-launcher {
-  height: calc(100vh - var(--window-toolbar-height)) !important;
-}
-
 </style>

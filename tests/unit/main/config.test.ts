@@ -45,6 +45,67 @@ beforeEach(() => {
   config.clearAppSettingsCache()
 })
 
+test('API key storage waits for the configured data directory before initializing', async () => {
+  vi.resetModules()
+  vi.mocked(app.getPath).mockReturnValue('/original-user-data')
+  try {
+    const imported = await import('@main/config')
+    expect(Store).not.toHaveBeenCalled()
+    expect(app.getPath).not.toHaveBeenCalled()
+    vi.mocked(app.getPath).mockReturnValue('/configured-preview-data')
+    imported.loadApiKeys(app)
+    expect(Store).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ cwd: '/configured-preview-data' }))
+  } finally {
+    vi.mocked(app.getPath).mockReturnValue('')
+  }
+})
+
+test('API key reads, saves and deletion stay in the current data directory', () => {
+  const original = { store: { 'engines.openai.apiKey': 'original-key' }, set: vi.fn(), delete: vi.fn() }
+  const preview = { store: { 'engines.openai.apiKey': 'preview-key' }, set: vi.fn(), delete: vi.fn() }
+  vi.mocked(Store)
+    .mockImplementationOnce(() => original as unknown as InstanceType<typeof Store>)
+    .mockImplementationOnce(() => preview as unknown as InstanceType<typeof Store>)
+  try {
+    vi.mocked(app.getPath).mockReturnValue('/key-isolation-original')
+    expect(config.loadApiKeys(app)).toEqual([{ name: 'engines.openai.apiKey', apiKey: 'original-key' }])
+    vi.mocked(app.getPath).mockReturnValue('/key-isolation-preview')
+    expect(config.loadApiKeys(app)).toEqual([{ name: 'engines.openai.apiKey', apiKey: 'preview-key' }])
+    expect(config.saveApiKeys(app, [{ name: 'engines.openai.apiKey', apiKey: 'updated-preview-key' }])).toBe(true)
+    expect(preview.set).toHaveBeenCalledWith('engines.openai.apiKey', 'encrypted-updated-preview-key')
+    expect(config.deleteApiKeys(app)).toBe(true)
+    expect(preview.delete).toHaveBeenCalledTimes(2)
+    expect(original.set).not.toHaveBeenCalled()
+    expect(original.delete).not.toHaveBeenCalled()
+    vi.mocked(app.getPath).mockReturnValue('/key-isolation-original')
+    expect(config.loadApiKeys(app)).toEqual([{ name: 'engines.openai.apiKey', apiKey: 'original-key' }])
+    expect(Store).toHaveBeenCalledTimes(2)
+    expect(Store).toHaveBeenNthCalledWith(1, expect.objectContaining({ cwd: '/key-isolation-original' }))
+    expect(Store).toHaveBeenNthCalledWith(2, expect.objectContaining({ cwd: '/key-isolation-preview' }))
+  } finally {
+    vi.mocked(Store).mockReset()
+    vi.mocked(app.getPath).mockReturnValue('')
+  }
+})
+
+test('debug and release API key stores remain separate in the same data directory', () => {
+  vi.mocked(app.getPath).mockReturnValue('/key-name-isolation')
+  try {
+    vi.stubEnv('DEBUG', '')
+    config.loadApiKeys(app)
+    vi.stubEnv('DEBUG', '1')
+    config.loadApiKeys(app)
+    vi.stubEnv('DEBUG', '')
+    config.loadApiKeys(app)
+    expect(Store).toHaveBeenCalledTimes(2)
+    expect(Store).toHaveBeenNthCalledWith(1, expect.objectContaining({ cwd: '/key-name-isolation', name: 'apiKeys' }))
+    expect(Store).toHaveBeenNthCalledWith(2, expect.objectContaining({ cwd: '/key-name-isolation', name: 'apiKeys-debug' }))
+  } finally {
+    vi.unstubAllEnvs()
+    vi.mocked(app.getPath).mockReturnValue('')
+  }
+})
+
 test('Load default settings', () => {
   const loaded = config.loadSettings(app)
   expect(config.settingsFileHadError()).toBe(false)

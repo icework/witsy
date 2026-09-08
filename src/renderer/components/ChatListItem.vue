@@ -1,9 +1,9 @@
 <template>
-  <div class="container">
+  <div class="container" role="button" tabindex="0" :aria-label="chat.title" :aria-current="!selectMode && chat.uuid === active?.uuid ? 'true' : undefined" @keydown.enter.self.prevent="($event.currentTarget as HTMLElement).click()" @keydown.space.self.prevent="($event.currentTarget as HTMLElement).click()">
     <div class="chat" :class="[{ selected: !selectMode && chat.uuid == active?.uuid }, store.config.appearance.chatList.layout]">
-      <input type="checkbox" class="select" :checked="selection.includes(chat.uuid)" v-if="selectMode"/>
+      <input type="checkbox" class="select" :aria-label="chat.title" :checked="selection.includes(chat.uuid)" v-if="selectMode"/>
       <div class="info" @dblclick="onRenameChat">
-        <div class="title">{{ chat.title }}</div>
+        <div class="title" :title="chat.title">{{ chat.title }}</div>
       </div>
       <div class="generating-indicator" v-if="generating">
         <Spinner />
@@ -63,8 +63,7 @@ const onRenameChat = () => {
   .chat {
     
     margin: 0;
-    padding: 0.75rem;
-    padding-left: 1rem;
+    padding: var(--space-6);
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -88,8 +87,8 @@ const onRenameChat = () => {
     }
 
     .title {
-      font-weight: var(--font-weight-medium);
-      font-size: 14.5px;
+      font-weight: var(--font-weight-regular);
+      font-size: var(--font-size-13);
     }
 
     input {
@@ -124,5 +123,15 @@ const onRenameChat = () => {
 
 }
 
+
+
+.container { border-radius: var(--radius-lg); margin-bottom: var(--space-1); }
+.container:focus-visible { outline: var(--space-1) solid var(--color-focus); outline-offset: calc(-1 * var(--space-1)); }
+.container .chat { min-height: var(--space-20); box-sizing: border-box; color: var(--sidebar-text-color); }
+.container:hover .chat:not(.selected) { background: var(--color-surface-low); }
+.container .chat.selected { background: var(--color-surface-high); color: var(--text-color); }
+.container .chat.selected .title { font-weight: var(--font-weight-medium); }
+.container .chat .title { white-space: nowrap; }
+.container .chat.compact { min-height: var(--space-16); }
 
 </style>

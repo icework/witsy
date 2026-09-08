@@ -1,5 +1,10 @@
 <template>
   <div class="chat-list">
+    <div class="list-empty" v-if="!visibleChats.length && (displayMode === 'timeline' || filter)">
+      <MessagesSquareIcon aria-hidden="true" />
+      <strong>{{ filter ? t('chatList.noResults') : t('chatList.emptyTitle') }}</strong>
+      <p>{{ filter ? t('chatList.noResultsHelp') : t('chatList.emptyHelp') }}</p>
+    </div>
     <div class="chats" ref="divChats">
       <ChatListTimeline v-if="displayMode == 'timeline'" :chats="visibleChats" :selection="selection" :active="chat" :selectMode="selectMode" :generating-chat-ids="generatingChatIds" @select="onSelectChat" @menu="showContextMenu"/>
       <ChatListFolder v-if="displayMode == 'folder'" :filtered="filter != ''" :chats="visibleChats" :selection="selection" :active="chat" :selectMode="selectMode" :generating-chat-ids="generatingChatIds" @select="onSelectChat" @menu="showContextMenu"/>
@@ -19,7 +24,7 @@ import Chat from '@models/chat'
 import type { ChatCallbacks } from '@screens/Chat.vue'
 import { t } from '@services/i18n'
 import { kMediaChatId, store } from '@services/store'
-import { FileInputIcon, PencilIcon, Trash2Icon } from 'lucide-vue-next'
+import { FileInputIcon, MessagesSquareIcon, PencilIcon, Trash2Icon } from 'lucide-vue-next'
 import { ChatListMode } from 'types/config'
 import { computed, inject, onMounted, PropType, ref } from 'vue'
 import ChatListFolder from './ChatListFolder.vue'
@@ -138,6 +143,11 @@ const handleActionClick = async (action: string) => {
 </script>
 
 <style scoped>
+.list-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-6); padding: var(--space-20) var(--space-6); text-align: center; color: var(--faded-text-color); }
+.list-empty svg { width: var(--icon-xl); height: var(--icon-xl); color: var(--color-outline); stroke-width: 1.5; }
+.list-empty strong { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); }
+.list-empty p { margin: 0; font-size: var(--font-size-12); line-height: var(--line-height-18); text-wrap: balance; }
+
 
 .chat-list {
 

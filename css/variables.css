@@ -7,10 +7,10 @@
   ======================================== */
 
   /* Primary Colors */
-  --color-primary: #1B4FB2;
+  --color-primary: #3867D6;
   --color-on-primary: #FFFFFF;
-  --color-primary-container: #EFF8FF;
-  --color-on-primary-container: #1E4B97;
+  --color-primary-container: #EDF2FC;
+  --color-on-primary-container: #315BB5;
 
   /* Secondary Colors */
   --color-secondary: #0C72EE;
@@ -41,20 +41,20 @@
   --color-on-warning-container: #B4540A;
 
   /* Surface Colors */
-  --color-surface: #FAFAFA;
+  --color-surface: #F7F8FA;
   --color-surface-lowest: #FFFFFF;
-  --color-surface-low: #F4F4F5;
-  --color-surface-base: #F0F0F0;
-  --color-surface-high: #E9E9EC;
-  --color-surface-highest: #E4E4E7;
+  --color-surface-low: #F0F2F5;
+  --color-surface-base: #ECEEF2;
+  --color-surface-high: #E5E8EE;
+  --color-surface-highest: #DCE0E7;
 
-  --color-on-surface: #27272A;
-  --color-on-surface-variant: #71717A;
+  --color-on-surface: #252831;
+  --color-on-surface-variant: #697180;
 
   /* Border & Outline Colors */
   --color-outline: #A1A1AA;
-  --color-outline-variant: #D9D9DD;
-  --color-outline-subtle: rgba(217, 217, 221, 0.7);
+  --color-outline-variant: #DEE2E9;
+  --color-outline-subtle: rgba(222, 226, 233, 0.65);
 
   /* Utility Colors */
   --color-scrim: #000000;
@@ -65,7 +65,7 @@
   ======================================== */
 
   /* Font Family */
-  --font-family-base: Geist, Inter, -apple-system, BlinkMacSystemFont, 'Arial', sans-serif;
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
 
   /* Font Sizes */
   --font-size-11: 11px;
@@ -219,22 +219,37 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Surface Colors - Dark Theme */
-    --color-surface: #202020;
-    --color-surface-lowest: #202020;
-    --color-surface-low: #303030;
-    --color-surface-base: #303030;
-    --color-surface-high: #404040;
-    --color-surface-highest: #505050;
+    --color-surface: #191B20;
+    --color-surface-lowest: #1D1F24;
+    --color-surface-low: #25282F;
+    --color-surface-base: #2A2D35;
+    --color-surface-high: #323640;
+    --color-surface-highest: #414754;
 
-    --color-on-surface: #e0e0e0;
-    --color-on-surface-variant: #d0d0d0;
+    --color-on-surface: #ECEEF3;
+    --color-on-surface-variant: #A1A9B8;
 
     /* Border & Outline Colors - Dark Theme */
-    --color-outline: #787878;
-    --color-outline-variant: #646464;
+    --color-outline: #687283;
+    --color-outline-variant: #343944;
+    --color-outline-subtle: rgba(52, 57, 68, 0.7);
 
     /* Primary Colors - Dark Theme */
-    --color-primary: rgb(11, 132, 255);
+    --color-primary: #83A6FF;
+    --color-on-primary: #142346;
+    --color-primary-container: #263552;
+    --color-on-primary-container: #B2C8FF;
+    --color-secondary-container: #22354A;
+    --color-on-secondary-container: #9AC8FF;
+    --color-tertiary-container: #303444;
+    --color-on-tertiary-container: #C4C9E0;
+    --color-error: #FF958A;
+    --color-error-container: #402827;
+    --color-on-error-container: #FFB4AC;
+    --color-success-container: #163A30;
+    --color-on-success-container: #8BD9BB;
+    --color-warning-container: #3D3421;
+    --color-on-warning-container: #F0C675;
     --color-secondary: rgb(65, 156, 255);
   }
 

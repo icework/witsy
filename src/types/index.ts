@@ -111,6 +111,7 @@ export interface Chat {
   chatAgent?: ChatAgent
   uuid: string
   title?: string
+  titleSource?: 'manual' | 'generated'
   createdAt: number
   lastModified: number
   engine?: string

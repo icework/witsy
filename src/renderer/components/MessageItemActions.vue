@@ -3,28 +3,28 @@
     <MessageItemActionCopy v-if="isVisible('copy')" :message="message" />
     <MessageItemActionRead v-if="isVisible('read')" :message="message" :audio-state="audioState" :read-aloud="onReadAloud" />
     <template v-if="!message.transient">
-      <div class="action usage" v-if="message.usage && isVisible('usage')" @click="onUsage(message)">
+      <button type="button" class="action usage" v-if="message.usage && isVisible('usage')" @click="onUsage(message)">
         <ChartNoAxesColumnIncreasingIcon /> {{ t('common.usage') }}
-      </div>
-      <div class="action retry" v-if="message.role == 'assistant' && isVisible('retry')" @click="onRetry(message)">
+      </button>
+      <button type="button" class="action retry" v-if="message.role == 'assistant' && isVisible('retry')" @click="onRetry(message)">
         <RotateCcwIcon /> {{ t('common.retry') }}
-      </div>
-      <div class="action edit" v-if="message.type == 'text' && isVisible('edit')" @click="onEdit">
+      </button>
+      <button type="button" class="action edit" v-if="message.type == 'text' && isVisible('edit')" @click="onEdit">
         <PencilIcon /> {{ t('common.edit') }}
-      </div>
-      <div class="action quote" v-if="message.role == 'user' && message.type == 'text' && isVisible('quote')" @click="onQuote(message)">
+      </button>
+      <button type="button" class="action quote" v-if="message.role == 'user' && message.type == 'text' && isVisible('quote')" @click="onQuote(message)">
         <QuoteIcon /> {{ t('common.quote') }}
-      </div>
-      <div class="action delete" v-if="message.role == 'user' && message.type == 'text' && isVisible('delete')" @click="onDelete(message)">
+      </button>
+      <button type="button" class="action delete" v-if="message.role == 'user' && message.type == 'text' && isVisible('delete')" @click="onDelete(message)">
         <Trash2Icon /> {{ t('common.delete') }}
-      </div>
+      </button>
       <MessageItemActionScratchpad v-if="isVisible('scratchpad')" :message="message" />
-      <div class="action fork" v-if="isVisible('fork')" @click="onFork(message)">
+      <button type="button" class="action fork" v-if="isVisible('fork')" @click="onFork(message)">
         <GitBranchIcon /> {{ t('common.fork') }}
-      </div>
-      <div class="action tools" @click="onTools(message)" v-if="message.role == 'assistant' && store.config.appearance.chat.toolCallsDisplay != 'details' && isVisible('tools')">
+      </button>
+      <button type="button" class="action tools" @click="onTools(message)" v-if="message.role == 'assistant' && store.config.appearance.chat.toolCallsDisplay != 'details' && isVisible('tools')">
         <WrenchIcon /> {{ t('common.tools') }}
-      </div>
+      </button>
     </template>
   </div>
 </template>
@@ -180,12 +180,7 @@ const onTools = (message: Message) => {
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin-left: 8px;
     gap: 0.25rem;
-
-    &:first-child {
-      margin-left: 0px;
-    }
 
     svg {
       width: 0.75rem;
