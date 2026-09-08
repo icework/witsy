@@ -461,3 +461,13 @@ test.each(['screenshot', 'text'])('Forwards %s context requests from the chat bo
   await wrapper.find(`.context-${kind}`).trigger('click')
   expect(wrapper.emitted('context-requested')).toEqual([[kind]])
 })
+
+test('background task preview hides chat menus and model settings, then restores them on return', async () => {
+  const wrapper = mount(ChatArea, { props: { chat: chat!, compact: true, screenshotPending: true, taskPreview: true }, slots: { runtime: '<div class="task-preview-content">Task context</div>' } })
+  expect(wrapper.find('.task-preview-content').exists()).toBe(true)
+  expect(wrapper.find('.sp-main > header, .model-settings, .prompt').exists()).toBe(false)
+  await wrapper.setProps({ taskPreview: false, screenshotPending: false })
+  expect(wrapper.find('.sp-main > header').exists()).toBe(true)
+  expect(wrapper.find('.model-settings').exists()).toBe(true)
+  expect(wrapper.find('.prompt').exists()).toBe(true)
+})

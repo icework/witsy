@@ -17,7 +17,7 @@ vi.mock('electron', () => ({
 vi.mock('@main/context_selection', () => ({ readSelectedContext: vi.fn().mockResolvedValue('A controlled selection') }))
 import { readSelectedContext } from '@main/context_selection'
 import { desktopCapturer } from 'electron'
-import { openQuickChat, captureSelectedText, captureScreenshot, cropBounds, finishScreenshot, saveScreenshotSettings, screenshotSource, screenshotState, updateScreenshot } from '@main/screenshot_action'
+import { openPromptWorkflow, captureSelectedText, captureScreenshot, cropBounds, finishScreenshot, saveScreenshotSettings, screenshotSource, screenshotState, updateScreenshot } from '@main/screenshot_action'
 beforeEach(() => { state.home = fs.mkdtempSync(path.join(os.tmpdir(), 'summon-action-test-')); image.crop.mockReturnValue(image); vi.clearAllMocks(); updateScreenshot({ dismiss: true, busy: false, expand: true }) })
 afterEach(() => fs.rmSync(state.home, { recursive: true, force: true }))
 test('cancel does not create an image and restores hidden windows', async () => {
@@ -34,15 +34,15 @@ test('capture is preview-only and repeated activation does not recapture a runni
   expect(() => screenshotSource(10)).toThrow()
   finishScreenshot(9, { x: 0.2, y: 0.1, width: 0.5, height: 0.5 })
   expect(image.crop).toHaveBeenCalledWith({ x: 40, y: 10, width: 100, height: 50 })
-  expect(screenshotState()).toMatchObject({ image: 'data:image/png;base64,aGVsbG8=', compact: true, busy: false })
+  expect(screenshotState()).toMatchObject({ image: 'data:image/png;base64,aGVsbG8=', compact: false, busy: false })
   expect(() => screenshotSource(9)).toThrow()
   updateScreenshot({ chatId: 'chat', busy: true })
   await captureScreenshot(true)
   expect(desktopCapturer.getSources).toHaveBeenCalledOnce()
   expect(screenshotState().chatId).toBe('chat')
   updateScreenshot({ expand: true })
-  expect(win.setAlwaysOnTop).toHaveBeenLastCalledWith(false)
-  expect(win.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1400, height: 1000 })
+  expect(win.setAlwaysOnTop).not.toHaveBeenCalled()
+  expect(win.setBounds).not.toHaveBeenCalled()
 })
 test('retaking a pending task screenshot preserves its workflow and starts a new capture request', async () => {
   const workflow = { schemaVersion: 1 as const, id: 'task', name: 'Background screenshot', contextInput: 'screenshot' as const, mode: 'task' as const, agentId: 'agent', prompt: 'Describe the image', accelerator: '', enabled: true }
@@ -83,7 +83,7 @@ test('maps normalized selections to Retina pixels and rejects invalid regions', 
 test('selected text previews its workflow context without capturing the screen or submitting a task', async () => {
   const workflow = { schemaVersion: 1 as const, id: 'selection', name: 'Translate', contextInput: 'selected-text' as const, agentId: 'agent', prompt: 'Translate into Chinese', accelerator: '', enabled: true }
   await captureSelectedText(workflow)
-  expect(screenshotState()).toMatchObject({ contextKind: 'selected-text', contextText: 'A controlled selection', agentId: 'agent', prompt: 'Translate into Chinese', compact: true, busy: false })
+  expect(screenshotState()).toMatchObject({ contextKind: 'selected-text', contextText: 'A controlled selection', agentId: 'agent', prompt: 'Translate into Chinese', compact: false, busy: false })
   expect(desktopCapturer.getSources).not.toHaveBeenCalled()
   await captureSelectedText({ ...workflow, agentId: 'other' })
   expect(readSelectedContext).toHaveBeenCalledOnce()
@@ -95,7 +95,7 @@ test('selected text previews its workflow context without capturing the screen o
 test('unavailable selected text opens an editable empty preview', async () => {
   vi.mocked(readSelectedContext).mockRejectedValueOnce(new Error('Selection unavailable'))
   await captureSelectedText({ schemaVersion: 1, id: 'selection', name: 'Translate', contextInput: 'selected-text', prompt: '', accelerator: '', enabled: true })
-  expect(screenshotState()).toMatchObject({ contextKind: 'selected-text', compact: true, capturing: false, error: 'Selection unavailable' })
+  expect(screenshotState()).toMatchObject({ contextKind: 'selected-text', compact: false, capturing: false, error: 'Selection unavailable' })
   expect(screenshotState().contextText).toBeUndefined()
 })
 
@@ -115,28 +115,34 @@ test('manual text clears workflow defaults and repeated clicks preserve the pend
 })
 
 
-test('Quick Chat requests resume or new without capturing context or submitting', () => {
-  openQuickChat()
-  const first = screenshotState()
-  expect(first).toMatchObject({ compact: true, quickChatRequest: { fresh: false } })
-  expect(first.image).toBeUndefined()
-  expect(first.contextKind).toBeUndefined()
-  openQuickChat(true)
-  expect(screenshotState().quickChatRequest).toMatchObject({ fresh: true })
-  expect(screenshotState().quickChatRequest.id).not.toBe(first.quickChatRequest.id)
+test.each(['chat', 'task'] as const)('a %s workflow with no context prepares instructions without reading the screen or selection', mode => {
+  const workflow = { schemaVersion: 1 as const, id: 'none', name: 'Quick task', contextInput: 'none' as const, mode, prompt: 'Write a checklist', agentId: 'a', accelerator: '', enabled: true }
+  openPromptWorkflow(workflow)
+  const pending = screenshotState()
+  expect(pending).toMatchObject({ contextKind: 'none', workflowMode: mode, prompt: workflow.prompt, agentId: 'a', compact: mode === 'task', busy: false, capturing: false })
+  expect(pending.image).toBeUndefined()
+  expect(pending.contextText).toBeUndefined()
   expect(desktopCapturer.getSources).not.toHaveBeenCalled()
   expect(readSelectedContext).not.toHaveBeenCalled()
+  openPromptWorkflow({ ...workflow, prompt: 'Other task' })
+  updateScreenshot({ manualText: true })
+  expect(screenshotState()).toEqual(pending)
+  updateScreenshot({ dismiss: true })
+  openPromptWorkflow({ ...workflow, prompt: 'New task' })
+  expect(screenshotState().prompt).toBe('New task')
+  expect(screenshotState().requestId).not.toBe(pending.requestId)
+  updateScreenshot({ chatId: 'running', busy: true })
+  const running = screenshotState()
+  openPromptWorkflow(workflow)
+  expect(screenshotState()).toEqual(running)
 })
 
-test('Quick Chat reopening preserves an active run or pending context', () => {
-  openQuickChat()
-  updateScreenshot({ chatId: 'running-chat', busy: true })
-  const request = screenshotState().quickChatRequest
-  openQuickChat(true)
-  expect(screenshotState()).toMatchObject({ chatId: 'running-chat', busy: true, quickChatRequest: request })
-  updateScreenshot({ busy: false })
-  updateScreenshot({ manualText: true })
-  const preview = screenshotState()
-  openQuickChat(true)
-  expect(screenshotState()).toEqual(preview)
+test('background launcher restores regular chat sizing after submission and original bounds on expand', () => {
+  openPromptWorkflow({ schemaVersion: 1, id: 'launcher', name: 'Task', contextInput: 'none', mode: 'task', prompt: 'Summarize', accelerator: '', enabled: true })
+  expect(win.setMinimumSize).toHaveBeenLastCalledWith(480, 280)
+  expect(win.setBounds).toHaveBeenLastCalledWith(expect.objectContaining({ width: 680, height: 340 }))
+  updateScreenshot({ chatId: 'running', busy: true })
+  expect(win.setMinimumSize).toHaveBeenLastCalledWith(800, 600)
+  updateScreenshot({ expand: true })
+  expect(win.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1400, height: 1000 })
 })

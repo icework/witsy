@@ -3,7 +3,7 @@
     <header><div><h2>{{ t('contextWorkflow.title') }}</h2><p>{{ t('contextWorkflow.launchHelp') }}</p></div><button @click="settings"><Settings2Icon />{{ t('common.settings') }}</button></header>
     <ul>
       <li v-for="workflow in workflows" :key="workflow.id" :class="{ disabled: !workflow.enabled }">
-        <div class="workflow-symbol"><CameraIcon v-if="workflow.contextInput === 'screenshot'" /><TextSelectIcon v-else /></div>
+        <div class="workflow-symbol"><CameraIcon v-if="workflow.contextInput === 'screenshot'" /><TextSelectIcon v-else-if="workflow.contextInput === 'selected-text'" /><WorkflowIcon v-else /></div>
         <div><strong>{{ workflow.name }}</strong><p>{{ t('contextWorkflow.' + workflow.contextInput) }} · {{ t(workflow.mode === 'task' ? 'contextWorkflow.taskMode' : 'contextWorkflow.chatMode') }} · {{ agents.find(a => a.id === workflow.agentId)?.name || t('chatAgent.chooseAfter') }}</p><kbd v-if="workflow.accelerator">{{ workflow.accelerator }}</kbd></div>
         <button :disabled="working || !workflow.enabled" @click="run(workflow.id)">{{ workflow.enabled ? t(workflow.mode === 'task' ? 'contextWorkflow.prepareTask' : 'contextWorkflow.openChat') : t('contextWorkflow.disabled') }}<ArrowUpRightIcon /></button>
       </li>
@@ -14,7 +14,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ArrowUpRightIcon, CameraIcon, Settings2Icon, TextSelectIcon } from 'lucide-vue-next'
+import { ArrowUpRightIcon, CameraIcon, Settings2Icon, TextSelectIcon, WorkflowIcon } from 'lucide-vue-next'
 import { t } from '@services/i18n'
 import { ChatAgent, ContextWorkflow } from '../../types/chat_agent'
 const workflows = ref<ContextWorkflow[]>([]), agents = ref<ChatAgent[]>([])

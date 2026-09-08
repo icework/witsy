@@ -1,6 +1,7 @@
 <template>
   <div class="prompt" :class="{ 'drag-over': isDragOver }" @drop="onDrop" @dragover="onDragOver" @dragenter="onDragEnter" @dragleave="onDragLeave">
     <slot name="before" />
+    <ContextScreenshot v-if="contextImage" :image="contextImage" editable :disabled="contextDisabled" @retake="emit('context-retake')" @remove="emit('context-remove')" />
     <div class="attachments" v-if="attachments.length > 0">
       <div class="attachment" v-for="(attachment, index) in attachments" :key="index">
         <AttachmentView :attachment="attachment" />
@@ -207,6 +208,7 @@ import AttachmentView from './Attachment.vue'
 import ButtonIcon from './ButtonIcon.vue'
 import ContextMenuPlus, { MenuPosition } from './ContextMenuPlus.vue'
 import EngineModelMenu from './EngineModelMenu.vue'
+import ContextScreenshot from './ContextScreenshot.vue'
 import Loader from './Loader.vue'
 import PromptFeature from './PromptFeature.vue'
 import PromptMenu from './PromptMenu.vue'
@@ -234,6 +236,7 @@ const { onDomEvent, offDomEvent } = useEventListener()
 const { onIpcEvent } = useIpcListener()
 
 const props = defineProps({
+  contextImage: String,
   chat: {
     type: Object as PropType<Chat>,
     required: false
@@ -338,7 +341,7 @@ const isDragOver = ref(false)
 const commandsAnchor = ref('.prompt .textarea-wrapper')
 
 const emit = defineEmits([
-  'context-requested', 'set-engine-model', 'tools-updated',
+  'context-retake', 'context-remove', 'context-consumed', 'context-requested', 'set-engine-model', 'tools-updated',
   'prompt', 'run-agent', 'stop',
   'conversation-mode'
 ])
@@ -562,6 +565,11 @@ const onSendPrompt = () => {
     return
   }
 
+  const contextImage = props.contextImage
+  if (contextImage && !llmManager.getChatModel(engine(), model())?.capabilities?.vision) {
+    Dialog.alert(t('chatAgent.noVision'))
+    return
+  }
   let message = prompt.value.trim()
   if (command.value) {
     message = commandI18n(command.value, 'template').replace('{input}', message)
@@ -574,13 +582,14 @@ const onSendPrompt = () => {
     const sendPromptParams: SendPromptParams = {
       instructions: props.chat?.instructions,
       prompt: message,
-      attachments: attachments.value,
+      attachments: [...attachments.value, ...(contextImage ? [new Attachment(contextImage.slice(contextImage.indexOf(',') + 1), contextImage.slice(5, contextImage.indexOf(';')))] : [])],
       docrepos: docrepos.value,
       expert: store.experts.find((e) => e.id === expert.value?.id),
       skill: skill.value,
       execMode: deepResearchActive.value ? 'deepresearch' : 'prompt',
     }
     emit('prompt', sendPromptParams)
+    if (contextImage) emit('context-consumed')
     attachments.value = []
   })
 }

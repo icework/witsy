@@ -51,3 +51,20 @@ test('a failed shortcut save leaves the saved item and edited draft visible', as
   expect(wrapper.find<HTMLInputElement>('input[placeholder="Command+Shift+2"]').element.value).toBe('Command+Shift+3')
   expect(workflow.accelerator).toBe('Command+Shift+2')
 })
+
+test('None can be selected and saved, and Cancel restores the saved context choice', async () => {
+  const wrapper = mount(SettingsContextWorkflows)
+  await wrapper.vm.load(); await flushPromises()
+  await wrapper.findAll('form select')[0].setValue('none')
+  expect(wrapper.text()).toContain('contextWorkflow.noneHelp')
+  await wrapper.findAll('.form-actions button')[1].trigger('click')
+  expect(wrapper.findAll<HTMLSelectElement>('form select')[0].element.value).toBe('screenshot')
+  await wrapper.findAll('form select')[0].setValue('none')
+  const saved = { ...workflow, contextInput: 'none' as const, mode: 'chat' as const }
+  vi.mocked(window.api.chatAgents.saveWorkflow).mockResolvedValue(saved)
+  vi.mocked(window.api.chatAgents.workflows).mockResolvedValue([saved])
+  await wrapper.find('form').trigger('submit'); await flushPromises()
+  expect(window.api.chatAgents.saveWorkflow).toHaveBeenCalledWith(saved)
+  expect(wrapper.find('.md-master-list-item').text()).toContain('contextWorkflow.none')
+  expect(wrapper.findAll<HTMLSelectElement>('form select')[0].element.value).toBe('none')
+})

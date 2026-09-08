@@ -10,8 +10,8 @@ vi.mock('electron', () => ({ app: { getPath: () => state.home }, globalShortcut:
   unregister: (key: string) => state.keys.delete(key),
 } }))
 vi.mock('@main/chat_agents', () => ({ listChatAgents: () => [{ id: 'agent' }] }))
-vi.mock('@main/screenshot_action', () => ({ captureScreenshot: vi.fn(), captureSelectedText: vi.fn() }))
-import { captureScreenshot, captureSelectedText } from '@main/screenshot_action'
+vi.mock('@main/screenshot_action', () => ({ captureScreenshot: vi.fn(), captureSelectedText: vi.fn(), openPromptWorkflow: vi.fn() }))
+import { captureScreenshot, captureSelectedText, openPromptWorkflow } from '@main/screenshot_action'
 import { listContextWorkflows, registerContextWorkflowShortcuts, removeContextWorkflow, runContextWorkflow, saveContextWorkflow } from '@main/context_workflows'
 const selection: ContextWorkflow = { schemaVersion: 1, id: 'selected', name: 'Translate', contextInput: 'selected-text', agentId: 'agent', prompt: 'Translate', accelerator: 'Command+Shift+7', enabled: true }
 beforeEach(() => { state.home = fs.mkdtempSync(path.join(os.tmpdir(), 'summon-workflow-')); state.keys.clear(); vi.clearAllMocks() })
@@ -51,4 +51,16 @@ test('conflicts and failed disk writes preserve the old binding and saved workfl
   expect(state.keys.has('Command+Shift+8')).toBe(false)
   expect(state.keys.has('Command+Shift+7')).toBe(true)
   expect(() => saveContextWorkflow({ ...selection, agentId: 'deleted' })).toThrow('no longer exists')
+})
+
+test.each(['chat', 'task'] as const)('a %s workflow persists no context and routes both launch and shortcut to its instructions', async mode => {
+  registerContextWorkflowShortcuts()
+  const workflow = saveContextWorkflow({ ...selection, id: 'none', contextInput: 'none', mode })
+  expect(listContextWorkflows().find(w => w.id === 'none')).toEqual(workflow)
+  await runContextWorkflow('none')
+  expect(openPromptWorkflow).toHaveBeenCalledWith(workflow)
+  state.keys.get(selection.accelerator)()
+  expect(openPromptWorkflow).toHaveBeenCalledTimes(2)
+  expect(captureScreenshot).not.toHaveBeenCalled()
+  expect(captureSelectedText).not.toHaveBeenCalled()
 })

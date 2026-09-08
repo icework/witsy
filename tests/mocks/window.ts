@@ -38,7 +38,6 @@ const useWindowMock = (opts?: WindowMockOpts) => {
   let runAtLogin = false
   window.api = {
     chatAgents: {
-      openQuickChat: vi.fn().mockResolvedValue(undefined),
       list: vi.fn().mockResolvedValue([]), save: vi.fn(), remove: vi.fn(),
       workflows: vi.fn().mockResolvedValue([]), saveWorkflow: vi.fn(), removeWorkflow: vi.fn(), runWorkflow: vi.fn(),
       screenshotSettings: vi.fn().mockResolvedValue({ accelerator: '' }), capture: vi.fn(),

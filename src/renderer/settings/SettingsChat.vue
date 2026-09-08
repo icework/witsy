@@ -4,20 +4,6 @@
       <div class="title">{{ t('settings.tabs.chat') }}</div>
     </header>
     <main class="form form-vertical form-large">
-      <section class="quick-chat-settings agent-form">
-        <div class="form-section">
-          <div class="section-heading"><h3>{{ t('quickChat.title') }}</h3><button type="button" @click="manageAgents">{{ t('quickChat.manageAgents') }}</button></div>
-          <label>{{ t('quickChat.defaultAgent') }}
-            <select v-model="store.config.prompt.defaultAgentId" :aria-label="t('quickChat.defaultAgent')" :title="defaultAgentName" :disabled="loadingAgents || !!agentsError" @change="store.saveSettings()">
-              <option value="">{{ t('quickChat.nativeDefault') }}</option>
-              <option v-if="missingDefault" :value="store.config.prompt.defaultAgentId" disabled>{{ t('quickChat.missingDefault') }}</option>
-              <option v-for="agent in chatAgents" :key="agent.id" :value="agent.id">{{ agent.name }} ({{ agent.kind }})</option>
-            </select>
-          </label>
-          <p>{{ t('quickChat.defaultHelp') }}</p>
-          <div v-if="agentsError" role="alert">{{ agentsError }} <button type="button" @click="loadAgents">{{ t('common.retry') }}</button></div>
-        </div>
-      </section>
       <section class="history-settings agent-form">
         <div class="form-section">
           <div class="section-heading"><h3>{{ t('settings.chat.history.title') }}</h3></div>
@@ -129,8 +115,6 @@
 
 import { ChatListLayout, ToolCallsDisplay, SendKey, TextFormat } from 'types/config';
 import { ref, computed, provide } from 'vue'
-import useEventBus from '@composables/event_bus'
-import { ChatAgent } from '../../types/chat_agent'
 import { store } from '@services/store'
 import { t } from '@services/i18n'
 import Message from '@models/message'
@@ -138,20 +122,6 @@ import MessageItem from '@components/MessageItem.vue'
 
 // provide null chat-callbacks for MessageItem (no actions available in settings preview)
 provide('chat-callbacks', null)
-
-const chatAgents = ref<ChatAgent[]>([])
-const loadingAgents = ref(false), agentsError = ref('')
-const missingDefault = computed(() => !!store.config.prompt.defaultAgentId && !chatAgents.value.some(a => a.id === store.config.prompt.defaultAgentId))
-const defaultAgentName = computed(() => chatAgents.value.find(a => a.id === store.config.prompt.defaultAgentId)?.name || t(missingDefault.value ? 'quickChat.missingDefault' : 'quickChat.nativeDefault'))
-const loadAgents = async () => {
-  loadingAgents.value = true; agentsError.value = ''
-  try { chatAgents.value = await window.api.chatAgents.list() }
-  catch (e) { agentsError.value = e instanceof Error ? e.message : String(e) }
-  finally { loadingAgents.value = false }
-}
-const manageAgents = () => window.api.settings.open({ initialTab: 'chatagents' })
-const { onBusEvent } = useEventBus()
-onBusEvent('chat-agent-settings-changed', loadAgents)
 
 const theme = ref(null)
 const fontSize = ref(null)
@@ -173,9 +143,7 @@ const fontStyle = computed(() => {
 })
 
 const load = () => {
-  store.config.prompt.defaultAgentId ??= ''
   store.config.chatHistory ??= { archiveFolder: '', incognito: false }
-  void loadAgents()
   theme.value = store.config.appearance.chat.theme || 'openai'
   layout.value = store.config.appearance.chatList.layout || 'normal'
   copyFormat.value = store.config.appearance.chat.copyFormat || 'text'
@@ -222,7 +190,7 @@ defineExpose({ load })
 
 <style scoped>
 
-.quick-chat-settings, .history-settings { margin-bottom: var(--space-12); }
+.history-settings { margin-bottom: var(--space-12); }
 
 .folder-control { display: flex; gap: var(--space-2); align-items: center; min-width: 0; }
 .folder-control input { flex: 1 1 16rem; min-width: 0; }

@@ -1,7 +1,7 @@
 <template>
   <div class="chat-area sp-main">
     
-    <header :class="{ 'is-left-most': isLeftMost }">
+    <header v-if="!taskPreview" :class="{ 'is-left-most': isLeftMost }">
       
       <ButtonIcon v-if="!compact" class="toggle-sidebar" v-tooltip="{ text: t('main.toggleSidebar'), position: 'bottom-right' }" @click="toggleSideBar">
         <PanelRightCloseIcon v-if="isLeftMost" />
@@ -16,7 +16,7 @@
         <IconRunAgent />
       </div> -->
 
-      <div class="title" @dblclick="onRenameChat">{{ chat?.title || (compact ? t('quickChat.title') : '\u00a0') }}</div>
+      <div class="title" @dblclick="onRenameChat">{{ chat?.title || '\u00a0' }}</div>
       <span class="separator" v-if="chat?.title && chat?.createdAt">&bull;</span>
       <div class="created-at" v-if="chat?.title && chat?.createdAt">{{ t('chat.startedAt', { date: formatDate(chat.createdAt) }) }}</div>
       <div v-if="chat?.temporary" class="incognito-badge" :title="t('chat.incognito.help')">
@@ -69,13 +69,13 @@
 
     </header>
     
-    <SearchNav :chat="chat" :scroller="messageList?.scroller" />
+    <SearchNav v-if="!taskPreview" :chat="chat" :scroller="messageList?.scroller" />
 
     <main>
       <div class="chat-content">
 
         <!-- <div class="chat-content-title">
-          <div class="title" @dblclick="onRenameChat">{{ chat?.title || (compact ? t('quickChat.title') : '\u00a0') }}</div>
+          <div class="title" @dblclick="onRenameChat">{{ chat?.title || '\u00a0' }}</div>
           <div class="spacer"></div> -->
           <!-- <SlidersHorizontalIcon class="icon settings" @click="showModelSettings = !showModelSettings" /> -->
           <!-- <MoreVerticalIcon class="icon" @click="onMenu" />
@@ -100,6 +100,8 @@
           :enable-deep-research="true"
           :enable-model-selection="enableModelSelection"
           :enable-context="enableContext"
+          :context-image="contextImage"
+          @context-retake="emit('context-retake')" @context-remove="emit('context-remove')" @context-consumed="emit('context-consumed')"
           :context-disabled="contextDisabled"
           @context-requested="emit('context-requested', $event)"
           :conversation-mode="conversationMode"
@@ -116,7 +118,7 @@
       
       </div>
       
-      <ModelSettings v-if="!chat?.runtime" class="model-settings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
+      <ModelSettings v-if="!chat?.runtime && !taskPreview" class="model-settings" :class="{ visible: showModelSettings }" :chat="chat" @close="showModelSettings = false"/>
     
     </main>
 
@@ -151,7 +153,9 @@ const tipsManager = useTipsManager(store)
 const llmManager: ILlmManager = LlmFactory.manager(store.config)
 
 const props = defineProps({
+  contextImage: String,
   compact: { type: Boolean, default: false },
+  taskPreview: { type: Boolean, default: false },
   enableContext: { type: Boolean, default: false },
   contextDisabled: { type: Boolean, default: false },
   enableModelSelection: { type: Boolean, default: true },
@@ -225,7 +229,7 @@ const prompt= ref<typeof Prompt>(null)
 const conversationMode = ref<ConversationMode>('off')
 const showModelSettings = ref(false)
 
-const emit = defineEmits(['context-requested', 'prompt', 'stop-generation', 'toggle-sidebar'])
+const emit = defineEmits(['context-retake', 'context-remove', 'context-consumed', 'context-requested', 'prompt', 'stop-generation', 'toggle-sidebar'])
 
 const onConversationMode = (mode: ConversationMode) => {
   conversationMode.value = mode

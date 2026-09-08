@@ -1070,7 +1070,7 @@
       },
       "mainWindow": "Open @:{'common.appName'}",
       "newChat": "New Chat",
-      "quickPrompt": "Quick Chat",
+      "quickPrompt": "Open Chat",
       "scratchpad": "@:{'scratchpad.title'}",
       "title": "File"
     },
@@ -2329,23 +2329,14 @@
     "loadFailed": "Could not load models.",
     "retry": "Retry"
   },
-  "quickChat": {
-    "title": "Quick Chat",
-    "defaultAgent": "Default Agent",
-    "defaultHelp": "New Quick Chats start with this agent. Reopening keeps your conversation and any manual changes. Screenshot and text workflows keep their own agent settings.",
-    "nativeDefault": "Native · default chat settings",
-    "missingDefault": "Saved agent unavailable · use Native",
-    "fallback": "The default Quick Chat agent is unavailable. Using Native; choose another agent below.",
-    "loadError": "Could not load the default agent. Using Native; you can choose an agent below.",
-    "manageAgents": "Manage agents",
-    "new": "New Quick Chat",
-    "settings": "Quick Chat settings"
-  },
   "contextWorkflow": {
     "title": "Context Workflows",
     "new": "New workflow",
     "name": "Workflow name",
     "input": "Context input",
+    "none": "None",
+    "noneHelp": "Use only the task instructions. No screenshot or selected text will be captured.",
+    "nonePreviewHelp": "Review the instructions and chat settings before sending.",
     "screenshot": "Screenshot",
     "selected-text": "Selected text",
     "prompt": "Task instructions",
@@ -2356,6 +2347,7 @@
     "taskMode": "Background task",
     "taskModeHelp": "Submit with Enter, hide the launcher and let the Agent continue asynchronously.",
     "taskPreviewHelp": "Review the context and task. Press Enter to start in the background; use Shift+Enter for a new line.",
+    "taskKeyboardHelp": "Enter to run · Shift+Enter for a new line · Esc to cancel",
     "runTask": "Run task",
     "prepareTask": "Prepare task",
     "enabled": "Enabled",
@@ -2371,7 +2363,7 @@
     "screenshotHelp": "Select a region of the screen. Only the cropped image is included in the preview.",
     "shortcutHelp": "Optional global shortcut, for example Command+Shift+2. Leave blank for manual activation. Conflicting shortcuts cannot be saved.",
     "previewHelp": "Review or edit the context, task and chat settings before sending.",
-    "launchHelp": "Choose a workflow to prepare context and an agent in chat. Review or change the draft before sending.",
+    "launchHelp": "Conversation workflows open a new chat. Background tasks open a compact launcher.",
     "openChat": "Open in chat",
     "addText": "Add text context"
   },
@@ -2429,7 +2421,7 @@
   },
   "agentDesign": {
     "agentHelp": "A reusable setup for your model, tools and instructions.",
-    "workflowHelp": "Capture context and send it to an agent with a single shortcut.",
+    "workflowHelp": "Run preset instructions with optional context using a single shortcut.",
     "behavior": "Runtime and behavior",
     "activation": "Shortcut and availability",
     "connectionsTitle": "Your runtimes, connected.",

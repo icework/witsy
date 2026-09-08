@@ -72,7 +72,6 @@
     "autoSave": false
   },
   "prompt": {
-    "defaultAgentId": "",
     "engine": "",
     "model": "",
     "autosave": false,

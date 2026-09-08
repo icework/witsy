@@ -81,7 +81,6 @@ export const installIpc = (
   ipcMain.handle(IPC.CONTEXT_WORKFLOW.SAVE, (_event, workflow) => contextWorkflows.saveContextWorkflow(workflow))
   ipcMain.handle(IPC.CONTEXT_WORKFLOW.REMOVE, (_event, id) => contextWorkflows.removeContextWorkflow(id))
   ipcMain.handle(IPC.CONTEXT_WORKFLOW.RUN, (_event, id) => contextWorkflows.runContextWorkflow(id))
-  ipcMain.handle(IPC.CHAT_AGENT.QUICK_CHAT, (_event, fresh) => screenshot.openQuickChat(fresh))
   ipcMain.handle(IPC.CHAT_AGENT.LIST, () => chatAgents.listChatAgents())
   ipcMain.handle(IPC.CHAT_AGENT.SAVE, (_event, agent) => chatAgents.saveChatAgent(agent))
   ipcMain.handle(IPC.CHAT_AGENT.REMOVE, (_event, id) => chatAgents.removeChatAgent(id))

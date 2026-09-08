@@ -10,7 +10,7 @@
 
     <main>
       
-      <MenuBar v-if="!quickChat" :mode="mode" @change="onMode" @new-chat="onNewChat" @run-onboarding="onRunOnboarding" @import-markdown="onImportMarkdown" />
+      <MenuBar v-if="!taskLauncher" :mode="mode" @change="onMode" @new-chat="onNewChat" @run-onboarding="onRunOnboarding" @import-markdown="onImportMarkdown" />
       
       <Chat ref="chat" :mode="chatMode" :active="mode === 'chat'" :style="{ display: mode === 'chat' ? undefined : 'none' }" :extra="viewParams" />
       <ContextWorkflows v-if="mode === 'context-workflows'" />
@@ -45,7 +45,7 @@
     
     </main>
     
-    <footer v-if="!quickChat">
+    <footer v-if="!taskLauncher">
       <label>{{ t('common.appName') }} v{{ version }}</label>
       <div class="actions">
         <ActivityIcon @click="onMode('debug')"/>
@@ -93,8 +93,8 @@ const audioBooth = ref<typeof AudioBooth>(null)
 const realtime = ref<typeof RealtimeChat>(null)
 const settings = ref<typeof Settings>(null)
 const showOnboarding = ref(false)
-const quickChat = ref(false)
-onIpcEvent('screenshot-state', (state) => { quickChat.value = state.compact; if (state.compact && mode.value !== 'chat') onMode('chat') })
+const taskLauncher = ref(false)
+onIpcEvent('screenshot-state', (state) => { taskLauncher.value = state.compact; if (state.compact && mode.value !== 'chat') onMode('chat') })
 const updateAvailable = ref(false)
 
 // init stuff

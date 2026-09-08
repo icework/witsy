@@ -59,6 +59,7 @@
       </div>
       <p v-if="chat.runtime && targetDirty">{{ t('runtime.applyFirst') }}</p>
       <form class="runtime-composer" v-if="!configuration && chat.runtime && !targetDirty && !screenshotPending" @submit.prevent="send">
+        <ContextScreenshot v-if="contextImage" :image="contextImage" editable :disabled="busy || loading || contextDisabled" @retake="emit('contextRetake')" @remove="emit('contextRemove')" />
         <textarea ref="input" v-model="prompt" :aria-label="t('runtime.message')" :placeholder="t('runtime.message')" rows="3" @keydown.enter.exact.prevent="send" />
         <div class="runtime-composer-actions">
           <button type="button" class="runtime-context" :id="`runtime-context-${chat.uuid}`" :aria-label="t('agentDesign.addContext')" :disabled="busy || loading || contextDisabled" @click="showContextMenu = !showContextMenu"><PlusIcon /></button>
@@ -82,6 +83,7 @@ import { ArrowUpIcon, PlusIcon, SquareIcon } from 'lucide-vue-next'
 import '../../../css/agent-forms.css'
 import Chat from '@models/chat'
 import PromptMenu from './PromptMenu.vue'
+import ContextScreenshot from './ContextScreenshot.vue'
 import Message from '@models/message'
 import Attachment from '@models/attachment'
 import { saveFileContents } from '@services/download'
@@ -96,8 +98,8 @@ import RuntimeConnectionDefaults from './RuntimeConnectionDefaults.vue'
 import NativeConnectionSettings from './NativeConnectionSettings.vue'
 import RuntimeModelVisibility from './RuntimeModelVisibility.vue'
 
-const props = defineProps<{ chat: Chat; screenshotPending?: boolean; configuration?: boolean; contextDisabled?: boolean }>()
-const emit = defineEmits<{ bind: [binding?: RuntimeBinding]; progress: []; contextRequested: [kind: 'screenshot' | 'text'] }>()
+const props = defineProps<{ chat: Chat; contextImage?: string; screenshotPending?: boolean; configuration?: boolean; contextDisabled?: boolean }>()
+const emit = defineEmits<{ bind: [binding?: RuntimeBinding]; progress: []; contextConsumed: [chatId: string]; contextRetake: []; contextRemove: []; contextRequested: [kind: 'screenshot' | 'text'] }>()
 const { emitBusEvent } = useEventBus()
 const connections = ref<RuntimeConnection[]>([])
 const selected = ref('')
@@ -244,7 +246,21 @@ const sendMessage = async (input?: string, images: string[] = []) => {
   try { receive(await window.api.runtime.start(chat.uuid, { ...chat.runtime }, text, ...(images.length ? [images] : []))) }
   catch (e) { chat.lastMessage().transient = false; chat.lastMessage().setText(t('runtime.notSubmitted')); if (props.chat.uuid === chat.uuid) run.value = null; persist(chat); throw e }
 }
-const send = () => attempt(() => sendMessage())
+const send = () => {
+  if (loading.value || busy.value || !prompt.value.trim()) return
+  return attempt(async () => {
+    const image = props.contextImage
+    const chat = props.chat
+    if (image && chat.runtime?.kind === 'opencode') {
+      if (!chat.runtime.model || !chat.runtime.provider) throw new Error(t('chatAgent.explicitModel'))
+      const options = await window.api.runtime.catalog({ ...chat.runtime })
+      if (!options.models.some(m => m.provider === chat.runtime.provider && m.id === chat.runtime.model && m.vision)) throw new Error(t('chatAgent.noVision'))
+    }
+    if (props.chat !== chat) return
+    await sendMessage(undefined, image ? [image] : [])
+    if (image) emit('contextConsumed', chat.uuid)
+  })
+}
 defineExpose({ configureNative: () => { if (props.configuration) { selected.value = ''; editing.value = false } }, sendMessage, getPrompt: () => prompt.value, focus: () => input.value?.focus(), setPrompt: (text: string) => { prompt.value = text } })
 const cancel = () => attempt(async () => { await window.api.runtime.cancel(props.chat.uuid) })
 const approve = (choice: string) => attempt(async () => { if (run.value?.approval) await window.api.runtime.approve(props.chat.uuid, run.value.approval.id, choice) })

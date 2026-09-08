@@ -144,7 +144,6 @@ export type AppearanceConfig = {
 }
 
 export type PromptConfig = {
-  defaultAgentId?: string
   engine: string
   model: string
   disableStreaming: boolean

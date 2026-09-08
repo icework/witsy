@@ -18,8 +18,8 @@
               <label :class="{ selected: (draft.mode || 'chat') === 'chat' }"><input v-model="draft.mode" type="radio" value="chat" /><span><strong>{{ t('contextWorkflow.chatMode') }}</strong><small>{{ t('contextWorkflow.chatModeHelp') }}</small></span></label>
               <label :class="{ selected: draft.mode === 'task' }"><input v-model="draft.mode" type="radio" value="task" /><span><strong>{{ t('contextWorkflow.taskMode') }}</strong><small>{{ t('contextWorkflow.taskModeHelp') }}</small></span></label>
             </div></fieldset>
-            <label>{{ t('contextWorkflow.input') }}<select v-model="draft.contextInput"><option value="screenshot">{{ t('contextWorkflow.screenshot') }}</option><option value="selected-text">{{ t('contextWorkflow.selected-text') }}</option></select></label>
-            <p>{{ draft.contextInput === 'selected-text' ? t('contextWorkflow.selectionHelp') : t('contextWorkflow.screenshotHelp') }}</p>
+            <label>{{ t('contextWorkflow.input') }}<select v-model="draft.contextInput"><option value="none">{{ t('contextWorkflow.none') }}</option><option value="screenshot">{{ t('contextWorkflow.screenshot') }}</option><option value="selected-text">{{ t('contextWorkflow.selected-text') }}</option></select></label>
+            <p>{{ t(draft.contextInput === 'none' ? 'contextWorkflow.noneHelp' : draft.contextInput === 'selected-text' ? 'contextWorkflow.selectionHelp' : 'contextWorkflow.screenshotHelp') }}</p>
             <label>{{ t('chatAgent.label') }}<select v-model="draft.agentId"><option value="">{{ t('chatAgent.chooseAfter') }}</option><option v-if="draft.agentId && !agents.some(a => a.id === draft.agentId)" :value="draft.agentId" disabled>{{ t('contextWorkflow.missingAgent') }}</option><option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }} ({{ agent.kind }})</option></select></label>
             <label>{{ t('contextWorkflow.prompt') }}<textarea v-model="draft.prompt" rows="4" /></label>
             </section>

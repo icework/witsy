@@ -4,8 +4,6 @@ import { store } from '@services/store'
 import defaults from '@root/defaults/settings.json'
 import PromptAnywhere from '@main/automations/anywhere'
 import * as window from '@main/window'
-import { openQuickChat } from '@main/screenshot_action'
-vi.mock('@main/screenshot_action', () => ({ openQuickChat: vi.fn() }))
 import { Configuration, InstructionsConfig } from '@/types/config'
 
 vi.mock('electron', async() => {
@@ -52,9 +50,9 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-test('Ordinary Quick Chat opens the shared chat host', async () => {
+test('Chat shortcut opens the main chat window', async () => {
   await PromptAnywhere.open()
-  expect(openQuickChat).toHaveBeenCalledOnce()
+  expect(window.openMainWindow).toHaveBeenCalledWith({ queryParams: { view: 'chat' } })
   expect(window.openPromptAnywhere).not.toHaveBeenCalled()
 })
 

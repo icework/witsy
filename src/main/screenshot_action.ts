@@ -4,7 +4,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { readSelectedContext } from './context_selection'
 import { setTimeout as compositorDelay } from 'node:timers/promises'
-import { ContextWorkflow, ScreenshotSettings, ScreenshotState } from '../types/chat_agent'
+import { ContextWorkflow, hasPendingContext, ScreenshotSettings, ScreenshotState } from '../types/chat_agent'
 import { createWindow, emitIpcEvent, mainWindow, openMainWindow } from './window'
 
 const state: ScreenshotState = { capturing: false, compact: false, busy: false }
@@ -42,42 +42,37 @@ export const saveScreenshotSettings = (settings: ScreenshotSettings): Screenshot
   return next
 }
 
+const restoreMainWindow = () => {
+  if (!state.compact || !mainWindow) return
+  state.compact = false
+  mainWindow.setAlwaysOnTop(false)
+  mainWindow.setMinimumSize(800, 600)
+  if (originalBounds) mainWindow.setBounds(originalBounds)
+  originalBounds = undefined
+}
+
 const show = () => {
+  const task = state.workflowMode === 'task' && hasPendingContext(state)
+  if (!task) restoreMainWindow()
   openMainWindow({ queryParams: { view: 'chat' } })
-  if (!state.compact) {
+  if (task && !state.compact) {
     originalBounds = mainWindow.getBounds()
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    mainWindow.setMinimumSize(600, 500)
-    mainWindow.setBounds({ x: area.x + Math.max(0, area.width - 820), y: area.y + 40, width: Math.min(800, area.width), height: Math.min(740, area.height - 40) })
+    const width = Math.min(680, area.width), height = Math.min(340, area.height - 40)
+    mainWindow.setMinimumSize(480, 280)
+    mainWindow.setBounds({ x: area.x + Math.max(0, Math.round((area.width - width) / 2)), y: area.y + 40, width, height })
     mainWindow.setAlwaysOnTop(true)
     state.compact = true
   }
   publish()
 }
 
-export const openQuickChat = (fresh = false): void => {
-  if (state.capturing) { overlay?.show(); return }
-  // Reopening pending context or a running chat must not replace its state.
-  if (!state.busy && !state.image && state.contextKind !== 'selected-text') {
-    state.quickChatRequest = { id: crypto.randomUUID(), fresh }
-    state.chatId = undefined
-    state.error = undefined
-  }
-  show()
-}
-
 export const updateScreenshot = (update: { manualText?: boolean; dismiss?: boolean; chatId?: string; busy?: boolean; expand?: boolean; hide?: boolean }) => {
-  if (update.manualText && !state.busy && !state.capturing && !state.image && state.contextKind !== 'selected-text') { beginContext('selected-text', null); state.error = undefined }
+  if (update.manualText && !state.busy && !state.capturing && !hasPendingContext(state)) { beginContext('selected-text', null); state.error = undefined }
   if (update.dismiss) { state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.workflowMode = undefined; state.error = undefined }
   if (update.chatId) { state.chatId = update.chatId; state.image = undefined; state.contextText = undefined; state.contextKind = undefined; state.error = undefined }
   if (update.busy !== undefined && (!update.chatId || update.chatId === state.chatId)) state.busy = update.busy
-  if (update.expand && mainWindow) {
-    state.compact = false
-    mainWindow.setAlwaysOnTop(false)
-    mainWindow.setMinimumSize(800, 600)
-    if (originalBounds) mainWindow.setBounds(originalBounds)
-    originalBounds = undefined
-  }
+  if (update.expand || !hasPendingContext(state)) restoreMainWindow()
   if (update.hide) mainWindow?.hide()
   publish()
 }
@@ -112,7 +107,7 @@ export const finishScreenshot = (senderId: number, region?: { x: number; y: numb
 }
 export const captureScreenshot = async (fresh = false, workflow?: ContextWorkflow | null): Promise<void> => {
   if (state.capturing) { overlay?.show(); return }
-  if (state.busy || ((state.image || state.contextKind === 'selected-text') && !fresh)) { show(); return }
+  if (state.busy || (hasPendingContext(state) && !fresh)) { show(); return }
   if (process.platform !== 'darwin') { state.error = 'Region capture is currently available on macOS.'; show(); return }
   if (systemPreferences.getMediaAccessStatus('screen') === 'denied') { state.error = 'Enable Screen Recording for Summon (Electron in development) in macOS System Settings, then restart the app.'; show(); return }
   // Retake replaces only the pending image; a new ordinary capture starts clean.
@@ -149,15 +144,14 @@ export const captureScreenshot = async (fresh = false, workflow?: ContextWorkflo
   }
 }
 
-const beginContext = (kind: 'screenshot' | 'selected-text', workflow?: ContextWorkflow | null) => {
-  state.quickChatRequest = undefined
+const beginContext = (kind: NonNullable<ScreenshotState['contextKind']>, workflow?: ContextWorkflow | null) => {
   state.contextKind = kind; state.contextText = undefined; state.image = undefined; state.chatId = undefined
   state.requestId = crypto.randomUUID()
   state.agentId = workflow?.agentId; state.prompt = workflow?.prompt; state.workflowName = workflow?.name; state.workflowMode = workflow?.mode || 'chat'
 }
 export const captureSelectedText = async (workflow: ContextWorkflow): Promise<void> => {
   if (state.capturing) { overlay?.show(); return }
-  if (state.busy || state.image || state.contextKind === 'selected-text') { show(); return }
+  if (state.busy || hasPendingContext(state)) { show(); return }
   beginContext('selected-text', workflow)
   state.capturing = true; state.error = undefined
   // Read before bringing Summon to the foreground, so the source selection stays active.
@@ -169,4 +163,12 @@ export const captureSelectedText = async (workflow: ContextWorkflow): Promise<vo
     if (!text.trim()) state.error = 'No selected text was available. Select text in the source app and use the workflow shortcut, or paste it below.'
   } catch (e) { state.error = e instanceof Error ? e.message : String(e) }
   finally { state.capturing = false; show(); publish() }
+}
+
+export const openPromptWorkflow = (workflow: ContextWorkflow): void => {
+  if (state.capturing) { overlay?.show(); return }
+  if (state.busy || hasPendingContext(state)) { show(); return }
+  beginContext('none', workflow)
+  state.error = undefined
+  show()
 }

@@ -4,7 +4,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { ContextWorkflow } from '../types/chat_agent'
 import { listChatAgents } from './chat_agents'
-import { captureScreenshot, captureSelectedText } from './screenshot_action'
+import { captureScreenshot, captureSelectedText, openPromptWorkflow } from './screenshot_action'
 
 const registered = new Map<string, string>()
 const file = () => path.join(app.getPath('userData'), 'context-workflows.json')
@@ -25,7 +25,8 @@ export const runContextWorkflow = async (id?: string): Promise<void> => {
   const items = listContextWorkflows()
   const workflow = id ? items.find(w => w.id === id) : items.find(w => w.enabled && w.contextInput === 'screenshot')
   if (id && (!workflow || !workflow.enabled)) throw new Error('This workflow is missing or disabled.')
-  if (workflow?.contextInput === 'selected-text') await captureSelectedText(workflow)
+  if (workflow?.contextInput === 'none') openPromptWorkflow(workflow)
+  else if (workflow?.contextInput === 'selected-text') await captureSelectedText(workflow)
   else await captureScreenshot(false, workflow || null)
 }
 export const registerContextWorkflowShortcuts = (): void => {
@@ -40,7 +41,7 @@ export const registerContextWorkflowShortcuts = (): void => {
   }
 }
 export const saveContextWorkflow = (input: ContextWorkflow): ContextWorkflow => {
-  if (!input.name?.trim() || !['screenshot', 'selected-text'].includes(input.contextInput)) throw new Error('Enter a workflow name and context input.')
+  if (!input.name?.trim() || !['screenshot', 'selected-text', 'none'].includes(input.contextInput)) throw new Error('Enter a workflow name and context input.')
   const accelerator = input.accelerator?.trim() || ''
   if (accelerator && !/(Command|Control|Ctrl|Alt|Option|CmdOrCtrl|CommandOrControl)\+/i.test(accelerator)) throw new Error('Use a shortcut with Command, Control or Option.')
   if (input.agentId && !listChatAgents().some(a => a.id === input.agentId)) throw new Error('The selected Agent no longer exists. Choose another Agent.')

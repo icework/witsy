@@ -100,3 +100,28 @@ test('saving an existing connection retains its selectable providers and models'
   expect(wrapper.find('.runtime-model-picker select[aria-label="runtime.model"]').text()).toContain('Luna')
   expect(wrapper.find('form').exists()).toBe(false)
 })
+
+test.each(['hermes', 'opencode'] as const)('the %s main composer sends its screenshot and consumes it after submission', async kind => {
+  const image = 'data:image/png;base64,aGVsbG8='
+  const chat = new Chat(); chat.temporary = true; chat.runtime = { kind, connectionId: 'local', provider: 'p', model: 'vision' }
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: [], profiles: [], models: [{ provider: 'p', id: 'vision', name: 'Vision', vision: true }] })
+  vi.mocked(window.api.runtime.start).mockResolvedValue({ chatId: chat.uuid, id: 'run', binding: chat.runtime, status: 'completed', text: 'done', detail: '' })
+  const wrapper = mount(RuntimeChat, { props: { chat, contextImage: image } }); await flushPromises()
+  await wrapper.find('textarea').setValue('Describe the screenshot')
+  await wrapper.find('.runtime-composer').trigger('submit'); await flushPromises()
+  expect(window.api.runtime.start).toHaveBeenCalledWith(chat.uuid, expect.objectContaining({ kind }), 'Describe the screenshot', [image])
+  expect(wrapper.emitted('contextConsumed')?.[0]).toEqual([chat.uuid])
+  expect(chat.messages.find(m => m.role === 'user').attachments[0].content).toBe('aGVsbG8=')
+})
+
+test('an OpenCode screenshot on a text-only model stays editable and is not submitted', async () => {
+  const chat = new Chat(); chat.runtime = { kind: 'opencode', connectionId: 'local', provider: 'p', model: 'text' }
+  vi.mocked(window.api.runtime.catalog).mockResolvedValue({ agents: [], profiles: [], models: [{ provider: 'p', id: 'text', name: 'Text', vision: false }] })
+  const wrapper = mount(RuntimeChat, { props: { chat, contextImage: 'data:image/png;base64,aGVsbG8=' } }); await flushPromises()
+  await wrapper.find('textarea').setValue('Describe this')
+  await wrapper.find('.runtime-composer').trigger('submit'); await flushPromises()
+  expect(window.api.runtime.start).not.toHaveBeenCalled()
+  expect(wrapper.find('[role="alert"]').text()).toBe('chatAgent.noVision')
+  expect(wrapper.find('textarea').element.value).toBe('Describe this')
+  expect(wrapper.emitted('contextConsumed')).toBeUndefined()
+})

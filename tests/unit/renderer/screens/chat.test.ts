@@ -48,7 +48,6 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  store.config.prompt.defaultAgentId = ''
   store.config.chatHistory.incognito = false
   vi.mocked(window.api.chatAgents.list).mockResolvedValue([])
 })
@@ -63,7 +62,8 @@ test('Renders correctly', () => {
   expect(wrapper.find('.prompt textarea').exists()).toBe(true)
 })
 
-test('screenshot Ask uses the saved Native agent and image without an external runtime or temporary file', async () => {
+test('main screenshot composer uses the saved Native agent and image without an external runtime or temporary file', async () => {
+  store.config.chatHistory.incognito = true
   const agent = { id: 'native-test', name: 'Native vision', kind: 'native' as const, native: { engine: 'mock', model: 'vision', instructions: 'Read images briefly', tools: [] } }
   vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
   vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, image: 'data:image/png;base64,aGVsbG8=' })
@@ -72,14 +72,14 @@ test('screenshot Ask uses the saved Native agent and image without an external r
   await flushPromises()
   const picker = wrapper.find('.chat-agent-picker')
   await picker.find('select').setValue(agent.id)
-  await picker.find('textarea').setValue('Name the colors')
-  await picker.find('input[type="checkbox"]').setValue(true)
-  await picker.find('form').trigger('submit')
+  await flushPromises()
+  await wrapper.find('.prompt textarea').setValue('Name the colors')
+  await wrapper.find('.prompt textarea').trigger('keydown', { key: 'Enter' })
   await flushPromises()
   expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Name the colors'), expect.objectContaining({ model: 'vision', instructions: 'Read images briefly', attachments: [expect.objectContaining({ content: 'aGVsbG8=' })] }), expect.any(Function), expect.any(Function))
   expect(window.api.runtime.start).not.toHaveBeenCalled()
   expect(window.api.file.save).not.toHaveBeenCalled()
-  expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith(expect.objectContaining({ busy: true, chatId: expect.any(String) }))
+  expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith({ dismiss: true })
   expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
   expect(wrapper.vm.assistant.chat.temporary).toBe(true)
   expect(store.history.chats.some(c => c.uuid === wrapper.vm.assistant.chat.uuid)).toBe(false)
@@ -89,16 +89,15 @@ test('screenshot Ask uses the saved Native agent and image without an external r
 test('workflow prefills Native config without sending; a manual model override wins on send', async () => {
   const agent = { id: 'native-preset', name: 'Preset', kind: 'native' as const, native: { engine: 'mock', model: 'vision', instructions: 'Template instruction', tools: [] } }
   vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
-  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, contextKind: 'selected-text', requestId: 'prefill', contextText: 'Context to explain', agentId: agent.id, prompt: 'Explain briefly' })
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, contextKind: 'selected-text', requestId: 'prefill', workflowName: 'Explain', contextText: 'Context to explain', agentId: agent.id, prompt: 'Explain briefly' })
   const prompt = vi.spyOn(Assistant.prototype, 'prompt').mockResolvedValue('success')
   const wrapper = mount(ChatScreen, { ...stubTeleport })
   await flushPromises()
   expect(wrapper.vm.assistant.chat.model).toBe('vision')
   expect(prompt).not.toHaveBeenCalled()
-  const picker = wrapper.find('.chat-agent-picker')
-  await picker.findAll('.chat-configuration select')[2].setValue('chat')
+  await wrapper.findAll('.prompt .chat-configuration select')[2].setValue('chat')
   expect(wrapper.vm.assistant.chat.model).toBe('chat')
-  await picker.find('form').trigger('submit'); await flushPromises()
+  await wrapper.find('.prompt textarea').trigger('keydown', { key: 'Enter' }); await flushPromises()
   expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Context to explain'), expect.objectContaining({ model: 'chat', instructions: 'Template instruction' }), expect.any(Function), expect.any(Function))
   expect(agent.native.model).toBe('vision')
   prompt.mockRestore()
@@ -111,7 +110,7 @@ test('manual text sends using the current chat without any saved Agent', async (
   const wrapper = mount(ChatScreen, { ...stubTeleport })
   await flushPromises()
   const uuid = wrapper.vm.assistant.chat.uuid
-  await wrapper.find('.chat-agent-picker form').trigger('submit'); await flushPromises()
+  await wrapper.find('.prompt textarea').trigger('keydown', { key: 'Enter' }); await flushPromises()
   expect(prompt).toHaveBeenCalledWith(expect.stringContaining('Manual context'), expect.objectContaining({ model: 'chat' }), expect.any(Function), expect.any(Function))
   expect(wrapper.vm.assistant.chat.uuid).toBe(uuid)
   expect(wrapper.vm.assistant.chat.chatAgent).toBeUndefined()
@@ -127,9 +126,10 @@ test.each(['native', 'hermes'] as const)('removing a screenshot keeps the %s cha
   const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
   const picker = wrapper.find('.chat-agent-picker')
   await picker.find('select').setValue(agent.id)
+  await flushPromises()
   const uuid = wrapper.vm.assistant.chat.uuid
-  await picker.find('textarea').setValue('Keep my question')
-  await picker.find('.screenshot-attachment button').trigger('click'); await flushPromises()
+  await wrapper.find(kind === 'hermes' ? '.runtime-chat textarea' : '.prompt textarea').setValue('Keep my question')
+  await wrapper.find('button[aria-label="chatAgent.removeScreenshot"]').trigger('click'); await flushPromises()
   expect(picker.find('img').exists()).toBe(false)
   expect(wrapper.vm.assistant.chat.uuid).toBe(uuid)
   expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
@@ -674,99 +674,57 @@ test.each(['hermes', 'opencode'] as const)('%s model changes preserve an unsent 
 })
 
 
-const showQuickChat = async (fresh = false) => {
-  const listener = vi.mocked(window.api._on).mock.calls.findLast(([name]) => name === 'screenshot-state')[1]
-  listener({ compact: true, capturing: false, busy: false, quickChatRequest: { id: crypto.randomUUID(), fresh } })
+test.each(['chat', 'task'] as const)('no-context %s workflow sends plain instructions and follows its interaction mode', async workflowMode => {
+  const agent = { id: 'plain', name: 'Plain task', kind: 'native' as const, native: { engine: 'mock', model: 'chat', tools: [] } }
+  vi.mocked(window.api.chatAgents.list).mockResolvedValueOnce([agent])
+  vi.mocked(window.api.chatAgents.screenshotState).mockResolvedValueOnce({ compact: true, capturing: false, busy: false, contextKind: 'none', workflowName: 'Checklist', requestId: 'plain', agentId: agent.id, prompt: 'Write a checklist', workflowMode })
+  const prompt = vi.spyOn(Assistant.prototype, 'prompt').mockResolvedValue('success')
+  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
+  expect(prompt).not.toHaveBeenCalled()
+  expect(wrapper.find('.prompt textarea').exists()).toBe(workflowMode === 'chat')
+  if (workflowMode === 'task') await wrapper.find('.background-task-launcher textarea').trigger('keydown', { key: 'Enter' })
+  else await wrapper.find('.prompt textarea').trigger('keydown', { key: 'Enter' })
   await flushPromises()
-}
-
-test.each(['native', 'hermes'] as const)('new Quick Chat applies the %s default without sending and preserves manual selection on resume', async kind => {
-  const agent = kind === 'native'
-    ? { id: 'default', name: 'Default native', kind, native: { engine: 'mock', model: 'vision', instructions: 'Short answers', tools: [] } }
-    : { id: 'default', name: 'Default Hermes', kind, binding: { kind, connectionId: 'local', profile: 'research', provider: 'provider', model: 'model' } }
-  const other = { id: 'manual', name: 'Manual native', kind: 'native' as const, native: { engine: 'mock', model: 'chat', tools: [] } }
-  store.config.prompt.defaultAgentId = agent.id
-  vi.mocked(window.api.chatAgents.list).mockResolvedValue([agent, other])
-  vi.mocked(window.api.runtime.list).mockResolvedValueOnce([{ id: 'local', name: 'Hermes', kind: 'hermes', endpoint: 'http://localhost:8642' }])
-  const send = vi.spyOn(Assistant.prototype, 'prompt')
-  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  await showQuickChat()
-  expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
-  expect(wrapper.find('.chat').classes()).toContain('quick-chat')
-  expect(wrapper.findAll('.prompt .chat-configuration select, .runtime-composer .chat-configuration select')).toHaveLength(3)
-  const id = wrapper.vm.assistant.chat.uuid
-  const input = wrapper.find('textarea')
-  await input.setValue('Keep this draft')
-  await wrapper.find('button.quick-chat-hide').trigger('click')
-  await showQuickChat()
-  expect(wrapper.vm.assistant.chat.uuid).toBe(id)
-  expect(wrapper.find('textarea').element.value).toBe('Keep this draft')
-  await wrapper.find('.chat-agent-picker select').setValue(other.id)
-  const manualId = wrapper.vm.assistant.chat.uuid
-  expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith({ chatId: manualId, busy: false })
-  await showQuickChat()
-  expect(wrapper.vm.assistant.chat.uuid).toBe(manualId)
-  expect(wrapper.vm.assistant.chat.chatAgent).toEqual(other)
-  await wrapper.find('button[aria-label="quickChat.new"]').trigger('click')
-  expect(window.api.chatAgents.openQuickChat).toHaveBeenCalledWith(true)
-  await showQuickChat(true)
-  expect(wrapper.vm.assistant.chat.chatAgent).toEqual(agent)
-  expect(wrapper.vm.assistant.chat.uuid).not.toBe(manualId)
-  expect(wrapper.find('textarea').element.value).toBe('')
-  expect(send).not.toHaveBeenCalled()
-  expect(window.api.runtime.start).not.toHaveBeenCalled()
-  expect(store.config.prompt.defaultAgentId).toBe(agent.id)
-  send.mockRestore()
+  expect(prompt).toHaveBeenCalledWith('Write a checklist', expect.objectContaining({ attachments: [] }), expect.any(Function), expect.any(Function))
+  if (workflowMode === 'task') expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith({ hide: true })
+  else expect(window.api.chatAgents.screenshotUpdate).not.toHaveBeenCalledWith({ hide: true })
+  prompt.mockRestore()
 })
 
-test('missing Quick Chat default falls back visibly without rewriting the saved preference', async () => {
-  store.config.prompt.defaultAgentId = 'deleted'
+test('each workflow creates a fresh main chat even without an Agent and does not auto-submit', async () => {
   const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  await showQuickChat(true)
-  expect(wrapper.vm.assistant.chat.engine).toBe('mock')
-  expect(wrapper.vm.assistant.chat.runtime).toBeUndefined()
-  expect(wrapper.find('[role="alert"]').text()).toBe('quickChat.fallback')
-  expect(store.config.prompt.defaultAgentId).toBe('deleted')
+  const previous = wrapper.vm.assistant.chat.uuid
+  const listener = vi.mocked(window.api._on).mock.calls.find(([signal]) => signal === 'screenshot-state')[1]
+  listener({ compact: false, capturing: false, busy: false, contextKind: 'none', workflowMode: 'chat', workflowName: 'Checklist', requestId: 'one', prompt: 'Make a checklist' }); await flushPromises()
+  const first = wrapper.vm.assistant.chat.uuid
+  expect(first).not.toBe(previous)
+  expect(wrapper.find('.prompt textarea').element.value).toBe('Make a checklist')
+  expect(wrapper.find('.chat').classes()).not.toContain('task-launcher')
+  expect(wrapper.find('.chat-agent-picker form').exists()).toBe(false)
+  listener({ compact: false, capturing: false, busy: false, contextKind: 'selected-text', workflowMode: 'chat', workflowName: 'Translate', requestId: 'two', prompt: 'Translate', contextText: 'Selected sentence' }); await flushPromises()
+  expect(wrapper.vm.assistant.chat.uuid).not.toBe(first)
+  expect(wrapper.find('.prompt textarea').element.value).toBe('Translate\n\nSelected sentence')
+  expect(window.api.chatAgents.screenshotUpdate).toHaveBeenCalledWith({ dismiss: true })
+  listener({ compact: false, capturing: false, busy: false, contextKind: 'none', workflowMode: 'chat', workflowName: 'Blank', requestId: 'three', prompt: '' }); await flushPromises()
+  expect(wrapper.find('.prompt textarea').element.value).toBe('')
   expect(window.api.runtime.start).not.toHaveBeenCalled()
 })
 
-test('Quick Chat agent load failure keeps a usable Native composer', async () => {
-  store.config.prompt.defaultAgentId = 'unreadable'
+test('a screenshot uses the regular main composer, retakes in the same chat and removes without clearing the draft', async () => {
   const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  vi.mocked(window.api.chatAgents.list).mockRejectedValueOnce(new Error('Read failed'))
-  await showQuickChat(true)
-  expect(wrapper.find('.prompt textarea').exists()).toBe(true)
-  expect(wrapper.find('[role="alert"]').text()).toBe('quickChat.loadError')
-})
-
-test.each(['native', 'hermes'] as const)('returning from a different main conversation restores the %s Quick Chat draft', async kind => {
-  const agent = kind === 'native'
-    ? { id: 'quick', name: 'Native', kind, native: { engine: 'mock', model: 'chat', tools: [] } }
-    : { id: 'quick', name: 'Hermes', kind, binding: { kind, connectionId: 'local' } }
-  store.config.prompt.defaultAgentId = agent.id
-  vi.mocked(window.api.chatAgents.list).mockResolvedValue([agent])
-  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  await showQuickChat()
-  const quickId = wrapper.vm.assistant.chat.uuid
-  await wrapper.find('textarea').setValue('Return to this draft')
-  const stateListener = vi.mocked(window.api._on).mock.calls.findLast(([name]) => name === 'screenshot-state')[1]
-  stateListener({ compact: false, capturing: false, busy: false })
-  const newChat = vi.mocked(window.api._on).mock.calls.findLast(([name]) => name === 'new-chat')[1]
-  newChat(); await flushPromises()
-  expect(wrapper.vm.assistant.chat.uuid).not.toBe(quickId)
-  await showQuickChat()
-  expect(wrapper.vm.assistant.chat.uuid).toBe(quickId)
-  expect(wrapper.find('textarea').element.value).toBe('Return to this draft')
-})
-
-test('repeated state delivery does not replace the Quick Chat or its draft', async () => {
-  const wrapper = mount(ChatScreen, { ...stubTeleport }); await flushPromises()
-  const listener = vi.mocked(window.api._on).mock.calls.findLast(([name]) => name === 'screenshot-state')[1]
-  const state = { compact: true, capturing: false, busy: false, quickChatRequest: { id: 'same-request', fresh: true } }
+  const listener = vi.mocked(window.api._on).mock.calls.find(([signal]) => signal === 'screenshot-state')[1]
+  const state = { compact: false, capturing: false, busy: false, contextKind: 'screenshot', workflowMode: 'chat', workflowName: 'Screenshot', requestId: 'first', image: 'data:image/png;base64,first', prompt: 'Explain' }
   listener(state); await flushPromises()
   const id = wrapper.vm.assistant.chat.uuid
-  await wrapper.find('textarea').setValue('Still here')
-  listener(state); await flushPromises()
+  expect(wrapper.find('.prompt .context-screenshot img').attributes('src')).toBe(state.image)
+  await wrapper.find('.prompt textarea').setValue('Edited question')
+  await wrapper.find('button[aria-label="chatAgent.retake"]').trigger('click'); await flushPromises()
+  expect(window.api.chatAgents.capture).toHaveBeenCalled()
+  listener({ ...state, requestId: 'second', image: 'data:image/png;base64,second' }); await flushPromises()
   expect(wrapper.vm.assistant.chat.uuid).toBe(id)
-  expect(wrapper.find('textarea').element.value).toBe('Still here')
+  expect(wrapper.find('.prompt textarea').element.value).toBe('Edited question')
+  expect(wrapper.find('.prompt .context-screenshot img').attributes('src')).toBe('data:image/png;base64,second')
+  await wrapper.find('button[aria-label="chatAgent.removeScreenshot"]').trigger('click')
+  expect(wrapper.find('.prompt .context-screenshot').exists()).toBe(false)
+  expect(wrapper.find('.prompt textarea').element.value).toBe('Edited question')
 })

@@ -14,12 +14,11 @@ export interface ChatAgent {
 export interface ScreenshotState {
   capturing: boolean
   compact: boolean
-  quickChatRequest?: { id: string; fresh: boolean }
   image?: string
   error?: string
   chatId?: string
   busy: boolean
-  contextKind?: 'screenshot' | 'selected-text'
+  contextKind?: 'screenshot' | 'selected-text' | 'none'
   contextText?: string
   requestId?: string
   agentId?: string
@@ -27,11 +26,14 @@ export interface ScreenshotState {
   workflowName?: string
   workflowMode?: 'chat' | 'task'
 }
+export const hasPendingContext = (state: Pick<ScreenshotState, 'image' | 'contextKind'>): boolean =>
+  !!state.image || state.contextKind === 'selected-text' || state.contextKind === 'none'
+
 export interface ContextWorkflow {
   schemaVersion: 1
   id: string
   name: string
-  contextInput: 'screenshot' | 'selected-text'
+  contextInput: 'screenshot' | 'selected-text' | 'none'
   mode?: 'chat' | 'task'
   agentId?: string
   prompt: string
@@ -40,7 +42,6 @@ export interface ContextWorkflow {
 }
 export interface ScreenshotSettings { accelerator: string; agentId?: string }
 export interface ChatAgentAPI {
-  openQuickChat(fresh?: boolean): Promise<void>
   list(): Promise<ChatAgent[]>
   save(agent: ChatAgent): Promise<ChatAgent>
   remove(id: string): Promise<void>
